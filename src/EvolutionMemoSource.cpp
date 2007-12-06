@@ -32,8 +32,21 @@ using namespace std;
 SyncItem *EvolutionMemoSource::createItem( const string &uid, SyncState state )
 {
     logItem( uid, "extracting from EV" );
+    GError *gerror = NULL;
+    icalcomponent *compptr;
+  
+    if (!e_cal_get_object(m_calendar,
+                          uid.c_str(),
+                          NULL,
+                          &compptr,
+                          &gerror)) {
+        throwError(string("retrieving item: ") + uid, gerror);
+    }
+    if (!compptr) {
+        throwError(string("retrieving item: ") + uid);
+    }
         
-    eptr<icalcomponent> comp(retrieveItem(uid));
+    eptr<icalcomponent> comp(compptr);
     auto_ptr<SyncItem> item(new SyncItem(uid.c_str()));
 
     item->setData("", 0);

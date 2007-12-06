@@ -203,6 +203,21 @@ void EvolutionCalendarSource::getChanges()
             nextItem = nextItem->next;
         }
     } while(foundChanges);
+
+    // Sanitize result: it is possible that items are listed
+    // as new and updated. That occurred when creating
+    // a recurring event and then updating the detached exceptions.
+    // Only send them as new in that case.
+    set<string>::iterator it = m_updatedItems.begin();
+    while (it != m_updatedItems.end()) {
+        if (m_newItems.find(*it) != m_newItems.end()) {
+            set<string>::iterator old = it;
+            ++it;
+            m_updatedItems.erase(old);
+        } else {
+            ++it;
+        }
+    }
 }
 
 void EvolutionCalendarSource::beginSyncThrow(bool needAll,
@@ -333,6 +348,7 @@ int EvolutionCalendarSource::addItemThrow(SyncItem& item)
 int EvolutionCalendarSource::insertItem(SyncItem& item, bool update)
 {
     bool fallback = false;
+    bool created = false;
     string data = getData(item);
 
     /*
@@ -400,52 +416,55 @@ int EvolutionCalendarSource::insertItem(SyncItem& item, bool update)
     if (!subcomp) {
         throwError("extracting event");
     }
-    
-    if (!update) {
-        const char *olduid = icalcomponent_get_uid(subcomp);
-        string olduidstr(olduid ? olduid : "");
+    do {
+        if (!update) {
+            const char *olduid = icalcomponent_get_uid(subcomp);
+            string olduidstr(olduid ? olduid : "");
 
-        if(!e_cal_create_object(m_calendar, subcomp, &uid, &gerror)) {
-            if (gerror->domain == E_CALENDAR_ERROR &&
-                gerror->code == E_CALENDAR_STATUS_OBJECT_ID_ALREADY_EXISTS) {
-                // Deal with error due to adding already existing item, that can happen,
-                // for example with a "dumb" server which cannot pair items by UID.
-                logItem(item, "exists already, updating instead");
-                fallback = true;
-                g_clear_error(&gerror);
-
-                // Starting with Evolution 2.12, the old UID was removed during
-                // e_cal_create_object(). Restore it so that the updating below works.
-                icalcomponent_set_uid(subcomp, olduidstr.c_str());
+            if(!e_cal_create_object(m_calendar, subcomp, &uid, &gerror)) {
+                if (gerror->domain == E_CALENDAR_ERROR &&
+                    gerror->code == E_CALENDAR_STATUS_OBJECT_ID_ALREADY_EXISTS) {
+                    // Deal with error due to adding already existing item, that can happen,
+                    // for example with a "dumb" server which cannot pair items by UID.
+                    logItem(item, "exists already, updating instead");
+                    fallback = true;
+                    g_clear_error(&gerror);
+                    
+                    // Starting with Evolution 2.12, the old UID was removed during
+                    // e_cal_create_object(). Restore it so that the updating below works.
+                    icalcomponent_set_uid(subcomp, olduidstr.c_str());
+                } else {
+                    throwError( "storing new calendar item", gerror );
+                }
             } else {
-                throwError( "storing new calendar item", gerror );
-            }
-        } else {
-            if (uid) {
-                item.setKey(uid);
+                created = true;
+                if (uid) {
+                    item.setKey(uid);
+                }
             }
         }
-    }
 
-    if (update || fallback) {
-        // ensure that the component has the right UID - some servers replace it
-        // inside the VEVENT, but luckily the SyncML standard requires them to
-        // provide the original UID in an update
-        if (update && item.getKey() && item.getKey()[0]) {
-            icalcomponent_set_uid(subcomp, item.getKey());
-        }
+        if (update || fallback) {
+            // ensure that the component has the right UID - some servers replace it
+            // inside the VEVENT, but luckily the SyncML standard requires them to
+            // provide the original UID in an update
+            if (update && item.getKey() && item.getKey()[0]) {
+                icalcomponent_set_uid(subcomp, item.getKey());
+            }
         
-        if (!e_cal_modify_object(m_calendar, subcomp, CALOBJ_MOD_ALL, &gerror)) {
-            throwError(string("updating calendar item ") + item.getKey(), gerror);
+            if (!e_cal_modify_object(m_calendar, subcomp, CALOBJ_MOD_THIS, &gerror)) {
+                throwError(string("updating calendar item ") + item.getKey(), gerror);
+            }
+            string uid = getCompUID(subcomp);
+            if (uid.size()) {
+                item.setKey(uid.c_str());
+            }
+            if (fallback && !created) {
+                status = STC_CONFLICT_RESOLVED_WITH_MERGE;
+            }
         }
-        string uid = getCompUID(subcomp);
-        if (uid.size()) {
-            item.setKey(uid.c_str());
-        }
-        if (fallback ) {
-            status = STC_CONFLICT_RESOLVED_WITH_MERGE;
-        }
-    }
+        subcomp = icalcomponent_get_next_component(icomp, getCompType());
+    } while(subcomp);
 
     return status;
 }
@@ -488,33 +507,54 @@ void EvolutionCalendarSource::logItem( SyncItem &item, const string &info, bool 
     }
 }
 
-icalcomponent *EvolutionCalendarSource::retrieveItem(const string &uid)
-{
-    GError *gerror = NULL;
-    icalcomponent *comp;
-
-    if (!e_cal_get_object(m_calendar,
-                          uid.c_str(),
-                          NULL,
-                          &comp,
-                          &gerror)) {
-        throwError(string("retrieving item: ") + uid, gerror);
-    }
-    if (!comp) {
-        throwError(string("retrieving item: ") + uid);
-    }
-
-    return comp;
-}
-
 string EvolutionCalendarSource::retrieveItemAsString(const string &uid)
 {
-    eptr<icalcomponent> comp(retrieveItem(uid));
-    eptr<char> icalstr;
+    GList *nextItem;
+    GError *gerror = NULL;
 
-    icalstr = e_cal_get_component_as_string(m_calendar, comp);
-    if (!icalstr) {
-        throwError(string("could not encode item as iCal: ") + uid);
+    if (!e_cal_get_objects_for_uid(m_calendar,
+                                   uid.c_str(),
+                                   &nextItem,
+                                   &gerror)) {
+        throwError(string("retrieving item: ") + uid, gerror);
+    }
+
+    string data = "BEGIN:VCALENDAR\n"
+        "PRODID:-//Ohly//NONSGML SyncEvolution//EN\n"
+        "VERSION:2.0\n";
+
+    set<string> timezones;
+
+    while (nextItem) {
+        eptr<char> icalstr;
+        
+        // icalstr = e_cal_get_component_as_string(m_calendar, (icalcomponent *)nextItem->data);
+        ECalComponent *ecomp = (ECalComponent *)nextItem->data;
+        icalstr = e_cal_component_get_as_string(ecomp);
+        if (!icalstr) {
+            throwError(string("could not encode item as iCal: ") + uid);
+        }
+        data += (char *)icalstr;
+
+        // remember which timezones were used to retrieve their definition later on
+        ECalComponentDateTime dt;
+        e_cal_component_get_dtend(ecomp, &dt);
+        if (dt.tzid) {
+            timezones.insert(dt.tzid);
+        }
+        e_cal_component_free_datetime(&dt);
+        e_cal_component_get_dtstart(ecomp, &dt);
+        if (dt.tzid) {
+            timezones.insert(dt.tzid);
+        }
+        e_cal_component_free_datetime(&dt);
+        e_cal_component_get_due(ecomp, &dt);
+        if (dt.tzid) {
+            timezones.insert(dt.tzid);
+        }
+        e_cal_component_free_datetime(&dt);
+        
+        nextItem = nextItem->next;
     }
 
     /*
@@ -525,7 +565,6 @@ string EvolutionCalendarSource::retrieveItemAsString(const string &uid)
      *
      * Inverse operation in insertItem().
      */
-    string data = string(icalstr);
     size_t propstart = data.find("\nCATEGORIES");
     bool modified = false;
     while (propstart != data.npos) {
@@ -547,6 +586,33 @@ string EvolutionCalendarSource::retrieveItemAsString(const string &uid)
     if (modified) {
         LOG.debug("after replacing \\, with , in CATEGORIES:\n%s", data.c_str());
     }
+
+    // try to append all timezone definitions, but ignore error (in
+    // some Evolution versions it was possible to import an event
+    // without the corresponding timezones - SF #1777453)
+    for (set<string>::const_iterator it = timezones.begin();
+         it != timezones.end();
+         ++it) {
+        icaltimezone *zone;
+        GError *gerror = NULL;
+
+        if (e_cal_get_timezone(m_calendar,
+                               it->c_str(),
+                               &zone,
+                               &gerror)) {
+            icalcomponent *zonecomp = icaltimezone_get_component(zone);
+            if (zonecomp) {
+                const char *zonestr = icalcomponent_as_ical_string(zonecomp);
+                if (zonestr) {
+                    data += (char *)zonestr;
+                }
+            }
+        } else {
+            g_clear_error(&gerror);
+        }
+    }
+
+    data += "END:VCALENDAR\n";
     
     return data;
 }

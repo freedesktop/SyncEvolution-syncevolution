@@ -94,14 +94,6 @@ class EvolutionCalendarSource : public EvolutionSyncSource
     string m_typeName;             /**< "calendar", "task list", "memo list" */
     ECal *(*m_newSystem)(void);    /**< e_cal_new_system_calendar, etc. */
     
-
-    /**
-     * retrieve the item with the given uid - may throw exception
-     *
-     * caller has to free result
-     */
-    icalcomponent *retrieveItem(const string &uid);
-
     /** retrieve the item with the given uid as VCALENDAR string - may throw exception */
     string retrieveItemAsString(const string &uid);
 

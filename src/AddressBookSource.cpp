@@ -129,7 +129,7 @@ static string CFString2Std(CFStringRef cfstring)
 
     CFIndex len = CFStringGetLength(cfstring) * 2 + 1;
     for (int tries = 0; tries < 3; tries++) {
-        arrayptr<char> buf(new char[len], "buffer");
+        boost::scoped_array<char> buf(new char[len], "buffer");
         if (CFStringGetCString(cfstring, buf, len, kCFStringEncodingUTF8)) {
             return string((char *)buf);
         }
@@ -285,7 +285,7 @@ public:
         VProperty *photo = vobj->getProperty("PHOTO");
         if (photo) {
             int len;
-            arrayptr<char> decoded((char *)b64_decode(len, photo->getValue()), "photo");
+            boost::scoped_array<char> decoded((char *)b64_decode(len, photo->getValue()), "photo");
             ref<CFDataRef> data(CFDataCreate(NULL, (UInt8 *)(char *)decoded, len));
             if (!PersonSetImageDataWrapper(m_person, data)) {
                 EvolutionSyncClient::throwError("cannot set photo data");
@@ -378,7 +378,7 @@ public:
 
         m_vobj.addProperty("END", "VCARD");
         m_vobj.fromNativeEncoding();
-        arrayptr<char> finalstr(m_vobj.toString(), "VOCL string");
+        boost::scoped_array<char> finalstr(m_vobj.toString(), "VOCL string");
         m_vcard = (char *)finalstr;
     }
 
@@ -639,7 +639,7 @@ private:
         if (!value || !value[0]) {
             return;
         }
-        arrayptr<char> buffer(wstrdup(value));
+        boost::scoped_array<char> buffer(wstrdup(value));
         char *saveptr, *endptr;
 
         ref<CFStringRef> cfvalue(Std2CFString(value));
@@ -692,7 +692,7 @@ private:
         if (!value || !value[0]) {
             return;
         }
-        arrayptr<char> buffer(wstrdup(value));
+        boost::scoped_array<char> buffer(wstrdup(value));
         char *saveptr, *endptr;
 
         ref<CFStringRef> cfvalue(Std2CFString(value));
@@ -779,7 +779,7 @@ private:
         if (!value || !value[0]) {
             return;
         }
-        arrayptr<char> buffer(wstrdup(value));
+        boost::scoped_array<char> buffer(wstrdup(value));
         char *saveptr, *endptr;
 
         ref<CFMutableDictionaryRef> dict(CFDictionaryCreateMutable(NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
@@ -875,7 +875,7 @@ private:
         if (!value || !value[0]) {
             return;
         }
-        arrayptr<char> buffer(wstrdup(value));
+        boost::scoped_array<char> buffer(wstrdup(value));
         char *saveptr, *endptr;
 
         ref<CFStringRef> cfvalue(Std2CFString(value));
@@ -973,7 +973,7 @@ private:
         if (!value || !value[0]) {
             return;
         }
-        arrayptr<char> buffer(wstrdup(value));
+        boost::scoped_array<char> buffer(wstrdup(value));
         char *saveptr, *endptr;
 
         char *last = my_strtok_r(buffer, VObject::SEMICOLON_REPLACEMENT, &saveptr, &endptr);
@@ -1014,7 +1014,7 @@ private:
         if (!value || !value[0]) {
             return;
         }
-        arrayptr<char> buffer(wstrdup(value));
+        boost::scoped_array<char> buffer(wstrdup(value));
         char *saveptr, *endptr;
 
         char *company = my_strtok_r(buffer, VObject::SEMICOLON_REPLACEMENT, &saveptr, &endptr);
@@ -1499,7 +1499,7 @@ void AddressBookSource::logItem(const string &uid, const string &info, bool debu
     }
 }
 
-void AddressBookSource::logItem(SyncItem &item, const string &info, bool debug)
+void AddressBookSource::logItem(const SyncItem &item, const string &info, bool debug)
 {
     if (LOG.getLevel() >= (debug ? LOG_LEVEL_DEBUG : LOG_LEVEL_INFO)) {
         string line;

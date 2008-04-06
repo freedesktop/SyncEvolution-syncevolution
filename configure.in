@@ -94,6 +94,8 @@ AC_SUBST(CORE_LDADD_DEP)
 
 # preserve src/client-api by default
 CLEAN_CLIENT_SRC=
+SYNC4J_LIB=$PWD/src/client-api.build/src/libsync4j.la
+
 AC_SUBST(CLEAN_CLIENT_SRC)
 
 if test ! "$SYNC4J"; then
@@ -133,8 +135,10 @@ if test ! "$SYNC4J"; then
     if test -f src/client-api/build/autotools/configure; then
         chmod u+x src/client-api/build/autotools/configure src/client-api/build/autotools/config.sub src/client-api/build/autotools/config.guess
 
-        # use local copy of the sources
+        # use local copy of the sources, with dependencies
+        # to trigger building the client library
         SYNC4J_SUBDIR=$PWD/src/client-api.build
+        SYNC4J_DEP=$PWD/src/client-api.build/src/libsync4j.la
 
         SYNC4J_CFLAGS="-I$SYNC4J_SUBDIR/include/common -I$SYNC4J_SUBDIR/include -I$SYNC4J_SUBDIR/test"
         SYNC4J_LIBS="-L$SYNC4J_SUBDIR/src -lsync4j"
@@ -159,6 +163,8 @@ AC_SUBST(SYNC4J_CFLAGS)
 AC_SUBST(SYNC4J_LIBS)
 AC_SUBST(SYNC4J)
 AC_SUBST(SYNC4J_SUBDIR)
+AC_SUBST(SYNC4J_DEP)
+AC_SUBST(SYNC4J_LIB)
 AC_SUBST(SYNC4JSRC)
 
 pkg_emodules_10="libedataserver-1.0"
@@ -326,6 +332,12 @@ else
         SYNCEVOLUTION_LDADD="\$(EXTRA_LTLIBRARIES)"
 fi
 AC_SUBST(SYNCEVOLUTION_LDADD)
+
+dnl CXXFLAGS gets applied to SyncEvolution and the client library.
+dnl For e.g. "-Wall -Werror" this might not be such a good idea;
+dnl SYNCEVOLUTION_CXXFLAGS can be used instead. It applies only
+dnl to the sources in the SyncEvolution repository.
+AC_SUBST(SYNCEVOLUTION_CXXFLAGS)
 
 dnl a quick-and-dirty way to detect compilation for the iPhone
 if test "$host" == "arm-apple-darwin"; then

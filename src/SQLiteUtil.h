@@ -31,8 +31,14 @@ using namespace std;
 namespace vocl {
     class VObject;
 }
-void inline unref(sqlite3 *db) { sqlite3_close(db); }
-void inline unref(sqlite3_stmt *stmt) { sqlite3_finalize(stmt); }
+
+class SQLiteUnref {
+ public:
+    static void unref(sqlite3 *db) { sqlite3_close(db); }
+    static void unref(sqlite3_stmt *stmt) { sqlite3_finalize(stmt); }
+};
+
+typedef eptr<sqlite3_stmt, sqlite3_stmt, SQLiteUnref> sqliteptr;
 
 /**
  * This class implements access to SQLite database files:
@@ -144,7 +150,7 @@ class SQLiteUtil
     string m_fileid;
 
     /** current database */
-    eptr<sqlite3> m_db;
+    eptr<sqlite3, sqlite3, SQLiteUnref> m_db;
 };
 
 #endif // ENABLE_SQLITE

@@ -62,14 +62,17 @@ class FileConfigNode : public ConfigNode {
      */
     FileConfigNode(const string &path, const string &fileName);
 
+    virtual string getName() const { return m_path + "/" + m_fileName; }
+
     virtual void flush();
     virtual string readProperty(const string &property) const;
     virtual void setProperty(const string &property,
                              const string &value,
-                             const string &comment = "");
-    virtual map<string, string> readProperties();
+                             const string &comment = "",
+                             const string *defValue = NULL);
+    virtual map<string, string> readProperties() const;
     virtual void removeProperty(const string &property);
-    virtual bool exists() { return m_exists; }
+    virtual bool exists() const { return m_exists; }
 };
 
 #endif

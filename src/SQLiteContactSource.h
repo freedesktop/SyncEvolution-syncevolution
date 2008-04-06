@@ -57,18 +57,18 @@ class SQLiteContactSource : public TrackingSyncSource
     /* implementation of EvolutionSyncSource interface */
     virtual void open();
     virtual void close();
-    virtual sources getSyncBackends() { return sources(); }
+    virtual sources getSyncBackends();
     virtual SyncItem *createItem(const string &uid);
     virtual string fileSuffix() { return "vcf"; }
     virtual const char *getMimeType() const { return "text/x-vcard"; }
     virtual const char *getMimeVersion() const { return "2.1"; }
     virtual const char *getSupportedTypes()const { return "text/vcard:3.0,text/x-vcard:2.1"; }
     virtual void logItem(const string &uid, const string &info, bool debug = false);
-    virtual void logItem(SyncItem &item, const string &info, bool debug = false);
+    virtual void logItem(const SyncItem &item, const string &info, bool debug = false);
 
     /* implementation of TrackingSyncSource interface */
     virtual void listAllItems(RevisionMap_t &revisions);
-    virtual string insertItem(string &uid, const SyncItem &item);
+    virtual string insertItem(string &uid, const SyncItem &item, bool &merged);
     virtual void deleteItem(const string &uid);
     virtual void flush();
 

@@ -39,7 +39,7 @@ class SourceList;
  * sources and executes the synchronization.
  *
  */
-class EvolutionSyncClient : public SyncClient, public EvolutionSyncConfig {
+class EvolutionSyncClient : public SyncClient, public EvolutionSyncConfig, public ConfigUserInterface {
     const string m_server;
     const set<string> m_sources;
     const bool m_doLogging;
@@ -62,6 +62,20 @@ class EvolutionSyncClient : public SyncClient, public EvolutionSyncConfig {
                         bool doLogging = false,
                         const set<string> &sources = set<string>());
     ~EvolutionSyncClient();
+
+    /**
+     * A helper function which interactively asks the user for
+     * a certain password. May throw errors.
+     *
+     * The default implementation uses stdin/stdout to communicate
+     * with the user.
+     *
+     * @param descr     A simple string explaining what the password is needed for,
+     *                  e.g. "SyncML server". Has to be unique and understandable
+     *                  by the user.
+     * @return entered password
+     */
+    virtual string askPassword(const string &descr);
 
     bool getQuiet() { return m_quiet; }
     void setQuiet(bool quiet) { m_quiet = quiet; }

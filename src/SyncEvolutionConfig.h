@@ -23,15 +23,19 @@
 #include "spds/AbstractSyncConfig.h"
 #include "spds/AbstractSyncSourceConfig.h"
 #include <boost/shared_ptr.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/trim.hpp>
 #include <list>
 #include <string>
 #include <sstream>
+#include <set>
 using namespace std;
 
 class EvolutionSyncSourceConfig;
 class PersistentEvolutionSyncSourceConfig;
 class ConfigTree;
 struct SyncSourceNodes;
+struct ConstSyncSourceNodes;
 
 /**
  * A property has a name and a comment. Derived classes might have
@@ -41,24 +45,44 @@ struct SyncSourceNodes;
  * string value and not just a reference.
  *
  * A default value is returned if the ConfigNode doesn't have
- * a value set (= empty string).
+ * a value set (= empty string). Invalid values in the configuration
+ * trigger an exception. Setting invalid values does not because
+ * it is not known where the value comes from - the caller should
+ * check it himself.
  */
 class ConfigProperty {
  public:
     ConfigProperty(const string &name, const string &comment, const string &def = string("")) :
-    m_name(name),
-        m_comment(comment),
-        m_defValue(def),
-        m_hidden(false)
+        m_obligatory(false),
+        m_hidden(false),
+        m_name(name),
+        m_comment(boost::trim_right_copy(comment)),
+        m_defValue(def)
         {}
+    virtual ~ConfigProperty() {}
     
     virtual string getName() const { return m_name; }
     virtual string getComment() const { return m_comment; }
     virtual string getDefValue() const { return m_defValue; }
 
+    /**
+     * Check whether the given value is okay.
+     * If not, then set an error string (one line, no punctuation).
+     *
+     * @return true if value is okay
+     */
+    virtual bool checkValue(const string &value, string &error) const { return true; }
+
+    /** split \n separated comment into lines without \n, appending them to commentLines */
+    static void splitComment(const string &comment, list<string> &commentLines);
+
     bool isHidden() const { return m_hidden; }
     void setHidden(bool hidden) { m_hidden = hidden; }
 
+    bool isObligatory() const { return m_obligatory; }
+    void setObligatory(bool obligatory) { m_obligatory = obligatory; }
+
+    /** set value unconditionally, even if it is not valid */
     void setProperty(ConfigNode &node, const string &value) const { node.setProperty(getName(), value, getComment()); }
     void setProperty(FilterConfigNode &node, const string &value, bool temporarily = false) const {
         if (temporarily) {
@@ -67,9 +91,42 @@ class ConfigProperty {
             node.setProperty(m_name, value, getComment());
         }
     }
-    virtual string getProperty(const ConfigNode &node) const { string res = node.readProperty(getName()); return res.size() ? res : getDefValue(); }
+
+    /** set default value of a property, marked as default unless forced setting */
+    void setDefaultProperty(ConfigNode &node, bool force) const {
+        string defValue = getDefValue();
+        node.setProperty(m_name, defValue, getComment(), force ? NULL : &defValue);
+    }
+
+    /**
+     * @retval isDefault    return true if the node had no value set and
+     *                      the default was returned instead
+     */
+    virtual string getProperty(const ConfigNode &node, bool *isDefault = NULL) const {
+        string name = getName();
+        string value = node.readProperty(name);
+        if (value.size()) {
+            string error;
+            if (!checkValue(value, error)) {
+                throwValueError(node, name, value, error);
+            }
+            if (isDefault) {
+                *isDefault = false;
+            }
+            return value;
+        } else {
+            if (isDefault) {
+                *isDefault = true;
+            }
+            return getDefValue();
+        }
+    }
+
+ protected:
+    void throwValueError(const ConfigNode &node, const string &name, const string &value, const string &error) const;
 
  private:
+    bool m_obligatory;
     bool m_hidden;
     const string m_name, m_comment, m_defValue;
 };
@@ -111,7 +168,10 @@ class StringConfigProperty : public ConfigProperty {
         m_values(values)
         {}
 
-    void normalizeValue(string &res) const {
+    /**
+     * @return false if aliases are defined and the string is not one of them
+     */
+    bool normalizeValue(string &res) const {
         Values values = getValues();
         for (Values::const_iterator value = values.begin();
              value != values.end();
@@ -119,16 +179,57 @@ class StringConfigProperty : public ConfigProperty {
             for (Aliases::const_iterator alias = value->begin();
                  alias != value->end();
                  ++alias) {
-                if (!strcasecmp(res.c_str(), alias->c_str())) {
+                if (boost::iequals(res, *alias)) {
                     res = *value->begin();
-                    return;
+                    return true;
                 }
             }
         }
+        return values.empty();
     }
 
-    virtual string getProperty(const ConfigNode &node) const {
-        string res = node.readProperty(getName());
+    /**
+     * This implementation accepts all values if no aliases
+     * are given, otherwise the value must be part of the aliases.
+     */
+    virtual bool checkValue(const string &propValue, string &error) const {
+        Values values = getValues();
+        if (values.empty()) {
+            return true;
+        }
+
+        ostringstream err;
+        err << "not one of the valid values (";
+        for (Values::const_iterator value = values.begin();
+             value != values.end();
+             ++value) {
+            if (value != values.begin()) {
+                err << ", ";
+            }
+            for (Aliases::const_iterator alias = value->begin();
+                 alias != value->end();
+                 ++alias) {
+                if (alias != value->begin()) {
+                    err << " = ";
+                }
+                if (alias->empty()) {
+                    err << "\"\"";
+                } else {
+                    err << *alias;
+                }
+                
+                if (boost::iequals(propValue, *alias)) {
+                    return true;
+                }
+            }
+        }
+        err << ")";
+        error = err.str();
+        return false;
+    }
+
+    virtual string getProperty(const ConfigNode &node, bool *isDefault = NULL) const {
+        string res = ConfigProperty::getProperty(node, isDefault);
         normalizeValue(res);
         return res;
     }
@@ -151,6 +252,21 @@ template<class T> class TypedConfigProperty : public ConfigProperty {
     ConfigProperty(name, comment, defValue)
         {}
 
+    /**
+     * This implementation accepts all values that can be converted
+     * to the required type.
+     */
+    virtual bool checkValue(const string &value, string &error) const {
+        istringstream in(value);
+        T res;
+        if (in >> res) {
+            return true;
+        } else {
+            error = "cannot parse value";
+            return false;
+        }
+    }
+
     void setProperty(ConfigNode &node, const T &value) const {
         ostringstream out;
 
@@ -168,14 +284,25 @@ template<class T> class TypedConfigProperty : public ConfigProperty {
         }
     }
 
-    T getProperty(ConfigNode &node) {
-        istringstream in(node.readProperty(getName()));
+    T getProperty(ConfigNode &node, bool *isDefault = NULL) {
+        string name = getName();
+        string value = node.readProperty(name);
+        istringstream in(value);
         T res;
-        if (in >> res) {
-            return res;
-        } else {
+        if (value.empty()) {
             istringstream defStream(getDefValue());
             defStream >> res;
+            if (isDefault) {
+                *isDefault = true;
+            }
+            return res;
+        } else {
+            if (!(in >> res)) {
+                throwValueError(node, name, value, "cannot parse value");
+            }
+            if (isDefault) {
+                *isDefault = false;
+            }
             return res;
         }
     }
@@ -186,33 +313,70 @@ typedef TypedConfigProperty<unsigned int> UIntConfigProperty;
 typedef TypedConfigProperty<long> LongConfigProperty;
 typedef TypedConfigProperty<unsigned long> ULongConfigProperty;
 
+/**
+ * This interface has to be provided by the user of the config
+ * to let the config code interact with the user.
+ */
+class ConfigUserInterface {
+ public:
+    virtual ~ConfigUserInterface() {}
+
+    /**
+     * A helper function which interactively asks the user for
+     * a certain password. May throw errors.
+     *
+     * @param descr     A simple string explaining what the password is needed for,
+     *                  e.g. "SyncML server". This string alone has to be enough
+     *                  for the user to know what the password is for, i.e. the
+     *                  string has to be unique.
+     * @return entered password
+     */
+    virtual string askPassword(const string &descr) = 0;
+};
+
+class PasswordConfigProperty : public ConfigProperty {
+ public:
+    PasswordConfigProperty(const string &name, const string &comment, const string &def = string("")) :
+       ConfigProperty(name, comment, def)
+           {}
+
+    /**
+     * Check the password and cache the result.
+     */
+    virtual void checkPassword(ConfigNode &node,
+                               ConfigUserInterface &ui,
+                               const string &descr,
+                               string &cachedPassword);
+
+    /**
+     * return the cached value if necessary and possible
+     */
+    virtual string getCachedProperty(ConfigNode &node,
+                                     const string &cachedPassword);
+};
 
 /**
  * Instead of reading and writing strings, this class interprets the content
  * as boolean with T/F or 1/0 (default format).
  */
-class BoolConfigProperty : public ConfigProperty {
+class BoolConfigProperty : public StringConfigProperty {
  public:
     BoolConfigProperty(const string &name, const string &comment, const string &defValue = string("F")) :
-    ConfigProperty(name, comment, defValue )
+    StringConfigProperty(name, comment, defValue,
+                         Values() + (Aliases("1") + "T" + "TRUE") + (Aliases("0") + "F" + "FALSE"))
         {}
 
     void setProperty(ConfigNode &node, bool value) {
-        node.setProperty(getName(), value ? "1" : "0", getComment());
+        StringConfigProperty::setProperty(node, value ? "1" : "0");
     }
-    void setProperty(FilterConfigNode &node, bool value, bool temporarily) {
-        string v(value ? "1" : "0");
-        if (temporarily) {
-            node.addFilter(getName(), v);
-        } else {
-            node.setProperty(getName(), v, getComment());
-        }
+    void setProperty(FilterConfigNode &node, bool value, bool temporarily = false) {
+        StringConfigProperty::setProperty(node, value ? "1" : "0", temporarily);
     }
-    int getProperty(ConfigNode &node) {
-        string res = node.readProperty(getName());
+    int getProperty(ConfigNode &node, bool *isDefault = NULL) {
+        string res = ConfigProperty::getProperty(node, isDefault);
 
-        return !strcasecmp(res.c_str(), "T") ||
-            !strcasecmp(res.c_str(), "TRUE") ||
+        return boost::iequals(res, "T") ||
+            boost::iequals(res, "TRUE") ||
             atoi(res.c_str()) != 0;
     }
 };
@@ -221,7 +385,20 @@ class BoolConfigProperty : public ConfigProperty {
  * A registry for all properties which might be saved in the same ConfigNode.
  * Currently the same as a simple list. Someone else owns the instances.
  */
-typedef list<const ConfigProperty *> ConfigPropertyRegistry;
+class ConfigPropertyRegistry : public list<const ConfigProperty *> {
+ public:
+    /** case-insensitive search for property */
+    const ConfigProperty *find(const string &propName) const {
+        for (const_iterator it = begin();
+             it != end();
+             ++it) {
+            if (boost::iequals((*it)->getName(), propName)) {
+                return *it;
+            }
+        }
+        return NULL;
+    }
+};
 
 /**
  * Store the current string value of a property in a cache
@@ -232,7 +409,11 @@ class ConfigStringCache {
  public:
     const char *getProperty(const ConfigNode &node, const ConfigProperty &prop) {
         string value = prop.getProperty(node);
-        pair< map<string, string>::iterator, bool > res = m_cache.insert(pair<string,string>(prop.getName(), value));
+        return storeString(prop.getName(), value);
+    }
+
+    const char *storeString(const string &key, const string &value) {
+        pair< map<string, string>::iterator, bool > res = m_cache.insert(pair<string,string>(key, value));
         if (!res.second) {
             res.first->second = value;
         }
@@ -283,10 +464,51 @@ class ConfigStringCache {
 class EvolutionSyncConfig : public AbstractSyncConfig {
  public:
     /**
-     * Opens the configuration for a specific server.
-     * Will succeed even if config does not yet exist.
+     * Opens the configuration for a specific server,
+     * searching for the config files in the usual
+     * places. Will succeed even if config does not
+     * yet exist: flushing such a config creates it.
+     *
+     * @param tree   if non-NULL, then this is used
+     *               as configuration tree instead of
+     *               searching for it; always uses the
+     *               current layout in that tree
      */
-    EvolutionSyncConfig(const string &server);
+    EvolutionSyncConfig(const string &server,
+                        boost::shared_ptr<ConfigTree> tree = boost::shared_ptr<ConfigTree>());
+
+    /**
+     * Creates a temporary configuration.
+     * Can be copied around, but not flushed.
+     */
+    EvolutionSyncConfig();
+
+   /** absolute directory name of the configuration root */
+    string getRootPath() const;
+
+    typedef list< pair<string, string> > ServerList;
+
+    /**
+     * returns list of servers in either the old (.sync4j) or
+     * new config directory (.config), given as server name
+     * and absolute root of config
+     */
+    static ServerList getServers();
+
+    /**
+     * returns list of available config templates, given as
+     * server name and comment
+     */
+    static ServerList getServerTemplates();
+
+    /**
+     * Creates a new instance of a configuration template.
+     * The result can be modified to set filters, but it
+     * cannot be flushed.
+     *
+     * @return NULL if no such template
+     */
+    static boost::shared_ptr<EvolutionSyncConfig> createServerTemplate(const string &server);
 
     /** true if the main configuration file already exists */
     bool exists() const;
@@ -300,6 +522,34 @@ class EvolutionSyncConfig : public AbstractSyncConfig {
     static ConfigPropertyRegistry &getRegistry();
 
     /**
+     * Replaces the property filter of either the sync properties or
+     * all sources. This can be used to e.g. temporarily override
+     * the active sync mode.
+     */
+    void setConfigFilter(bool sync, const FilterConfigNode::ConfigFilter &filter) {
+        if (sync) {
+            m_configNode->setFilter(filter);
+        } else {
+            m_sourceFilter = filter;
+        }
+    }
+
+    /**
+     * Read-write access to all configurable properties of the server.
+     * The visible properties are passed through the config filter,
+     * which can be modified.
+     */
+    virtual boost::shared_ptr<FilterConfigNode> getProperties(bool hidden = false) {
+        if (hidden) {
+            return boost::shared_ptr<FilterConfigNode>(new FilterConfigNode(m_hiddenNode));
+        } else {
+            return m_configNode;
+        }
+    }
+    virtual boost::shared_ptr<const FilterConfigNode> getProperties(bool hidden = false) const { return const_cast<EvolutionSyncConfig *>(this)->getProperties(hidden); }
+
+
+    /**
      * Returns a wrapper around all properties of the given source
      * which are saved in the config tree. Note that this is different
      * from the set of sync source configs used by the SyncManager:
@@ -309,13 +559,18 @@ class EvolutionSyncConfig : public AbstractSyncConfig {
      * EvolutionSyncClient. Those are complete whereas
      * PersistentEvolutionSyncSourceConfig only provides access to a
      * subset of the properties.
+     *
+     * Can be called for sources which do not exist yet.
      */
     virtual boost::shared_ptr<PersistentEvolutionSyncSourceConfig> getSyncSourceConfig(const string &name);
+    virtual boost::shared_ptr<const PersistentEvolutionSyncSourceConfig> getSyncSourceConfig(const string &name) const {
+        return const_cast<EvolutionSyncConfig *>(this)->getSyncSourceConfig(name);
+    }
 
     /**
      * Returns list of all configured (not active!) sync sources.
      */
-    virtual list<string> getSyncSources();
+    virtual list<string> getSyncSources() const;
 
     /**
      * Creates config nodes for a certain node. The nodes are not
@@ -326,18 +581,35 @@ class EvolutionSyncConfig : public AbstractSyncConfig {
      */
     SyncSourceNodes getSyncSourceNodes(const string &name,
                                        const string &trackName = "");
+    ConstSyncSourceNodes getSyncSourceNodes(const string &name,
+                                            const string &trackName = "") const;
 
     /**
-     * create a new sync configuration for the current server name
-     *
-     * @name serverTemplate     use default settings for this server (e.g. "funambol", "scheduleworld")
+     * initialize all properties with their default value
      */
-    void setDefaults(const string &serverTemplate);
+    void setDefaults();
 
     /**
-     * create a new sync source configuration
+     * create a new sync source configuration with default values
      */
     void setSourceDefaults(const string &name);
+
+    /**
+     * Copy all registered properties (hidden and visible) and the
+     * tracking node into the current config. This is done by reading
+     * all properties from the source config, which implies the unset
+     * properties will be set to their default values.  The current
+     * config is not cleared so additional, unregistered properties
+     * (should they exist) will continue to exist unchanged.
+     *
+     * The current config still needs to be flushed to make the
+     * changes permanent.
+     *
+     * @param sourceFilter   if NULL, then copy all sources; if not NULL,
+     *                       then only copy sources listed here
+     */
+    void copy(const EvolutionSyncConfig &other,
+              const set<string> *sourceFilter);
 
     /**
      * @defgroup SyncEvolutionSettings
@@ -389,6 +661,15 @@ class EvolutionSyncConfig : public AbstractSyncConfig {
     virtual void setUsername(const string &value, bool temporarily = false);
     virtual const char*  getPassword() const;
     virtual void setPassword(const string &value, bool temporarily = false);
+
+    /**
+     * Look at the password setting and if it requires user interaction,
+     * get it from the user. Then store it for later usage in getPassword().
+     * Without this call, getPassword() returns the original, unmodified
+     * config string.
+     */
+    virtual void checkPassword(ConfigUserInterface &ui);
+
     virtual bool getUseProxy() const;
     virtual void setUseProxy(bool value, bool temporarily = false);
     virtual const char*  getProxyHost() const;
@@ -397,6 +678,7 @@ class EvolutionSyncConfig : public AbstractSyncConfig {
     virtual const char* getProxyUsername() const;
     virtual void setProxyUsername(const string &value, bool temporarily = false);
     virtual const char* getProxyPassword() const;
+    virtual void checkProxyPassword(ConfigUserInterface &ui);
     virtual void setProxyPassword(const string &value, bool temporarily = false);
     virtual const char*  getSyncURL() const;
     virtual void setSyncURL(const string &value, bool temporarily = false);
@@ -409,6 +691,12 @@ class EvolutionSyncConfig : public AbstractSyncConfig {
     virtual unsigned int getMaxObjSize() const;
     virtual void setMaxObjSize(unsigned int value, bool temporarily = false);
     virtual unsigned long getReadBufferSize() const { return 0; }
+    virtual const char* getSSLServerCertificates() const;
+    virtual void setSSLServerCertificates(const string &value, bool temporarily = false);
+    virtual bool getSSLVerifyServer() const;
+    virtual void setSSLVerifyServer(bool value, bool temporarily = false);
+    virtual bool getSSLVerifyHost() const;
+    virtual void setSSLVerifyHost(bool value, bool temporarily = false);
     virtual bool  getCompression() const;
     virtual void setCompression(bool value, bool temporarily = false);
     virtual unsigned int getResponseTimeout() const { return 0; }
@@ -446,6 +734,8 @@ class EvolutionSyncConfig : public AbstractSyncConfig {
 private:
     string m_server;
     bool m_oldLayout;
+    string m_cachedPassword;
+    string m_cachedProxyPassword;
 
     /** holds all config nodes relative to the root that we found */
     boost::shared_ptr<ConfigTree> m_tree;
@@ -454,10 +744,25 @@ private:
     boost::shared_ptr<FilterConfigNode> m_configNode;
     boost::shared_ptr<ConfigNode> m_hiddenNode;
 
-    /** temporary overrides for source settings */
-    FilterConfigNode::ConfigFilter_t m_sourceFilter;
+    /** temporary overrides for sync or sync source settings */
+    FilterConfigNode::ConfigFilter m_sourceFilter;
 
     mutable ConfigStringCache m_stringCache;
+
+    static string getHome() {
+        const char *homestr = getenv("HOME");
+        return homestr ? homestr : ".";
+    }
+    
+    static string getOldRoot() {
+        return getHome() + "/.sync4j/evolution";
+    }
+
+    static string getNewRoot() {
+        const char *xdg_root_str = getenv("XDG_CONFIG_HOME");
+        return xdg_root_str ? string(xdg_root_str) + "/syncevolution" :
+            getHome() + "/.config/syncevolution";
+    }
 };
 
 /**
@@ -484,7 +789,26 @@ struct SyncSourceNodes {
     const boost::shared_ptr<ConfigNode> m_hiddenNode;
     const boost::shared_ptr<ConfigNode> m_trackingNode;
 };
-    
+
+struct ConstSyncSourceNodes {
+    ConstSyncSourceNodes(const boost::shared_ptr<const FilterConfigNode> &configNode,
+                         const boost::shared_ptr<const ConfigNode> &hiddenNode,
+                         const boost::shared_ptr<const ConfigNode> &trackingNode) : 
+    m_configNode(configNode),
+        m_hiddenNode(hiddenNode),
+        m_trackingNode(trackingNode)
+    {}
+
+    ConstSyncSourceNodes(const SyncSourceNodes &other) :
+    m_configNode(other.m_configNode),
+        m_hiddenNode(other.m_hiddenNode),
+        m_trackingNode(other.m_trackingNode)
+    {}
+
+    const boost::shared_ptr<const FilterConfigNode> m_configNode;
+    const boost::shared_ptr<const ConfigNode> m_hiddenNode;
+    const boost::shared_ptr<const ConfigNode> m_trackingNode;
+};
 
 
 /**
@@ -497,7 +821,6 @@ class EvolutionSyncSourceConfig : public AbstractSyncSourceConfig {
     EvolutionSyncSourceConfig(const string &name, const SyncSourceNodes &nodes);
 
     static ConfigPropertyRegistry &getRegistry();
-
     bool exists() const { return m_nodes.m_configNode->exists(); }
 
     /**
@@ -510,6 +833,9 @@ class EvolutionSyncSourceConfig : public AbstractSyncSourceConfig {
 
     const char *getPassword() const;
     virtual void setPassword(const string &value, bool temporarily = false);
+
+    /** same as EvolutionSyncConfig::checkPassword() */
+    virtual void checkPassword(ConfigUserInterface &ui);
 
     virtual const char *getDatabaseID() const;
     virtual void setDatabaseID(const string &value, bool temporarily = false);
@@ -661,6 +987,7 @@ class EvolutionSyncSourceConfig : public AbstractSyncSourceConfig {
     string m_name;
     SyncSourceNodes m_nodes;
     mutable ConfigStringCache m_stringCache;
+    string m_cachedPassword;
 };
 
 /**

@@ -19,10 +19,10 @@
 
 #include "EvolutionSyncSource.h"
 #include "EvolutionSyncClient.h"
+#include "SyncEvolutionUtil.h"
 #include <common/base/Log.h>
 
 #include <list>
-#include <sstream>
 using namespace std;
 
 #include <dlfcn.h>
@@ -36,7 +36,8 @@ ESource *EvolutionSyncSource::findSource( ESourceList *list, const string &id )
         for (s = e_source_group_peek_sources (group); s; s = s->next) {
             ESource *source = E_SOURCE (s->data);
             char *uri = e_source_get_uri(source);
-            bool found = !id.compare(e_source_peek_name(source)) ||
+            bool found = id.empty() ||
+                !id.compare(e_source_peek_name(source)) ||
                 (uri && !id.compare(uri));
             g_free(uri);
             if (found) {
@@ -74,17 +75,6 @@ void EvolutionSyncSource::resetItems()
     m_newItems.clear();
     m_updatedItems.clear();
     m_deletedItems.clear();
-}
-
-string EvolutionSyncSource::getData(SyncItem& item)
-{
-    char *mem = (char *)malloc(item.getDataSize() + 1);
-    memcpy(mem, item.getData(), item.getDataSize());
-    mem[item.getDataSize()] = 0;
-
-    string res(mem);
-    free(mem);
-    return res;
 }
 
 string EvolutionSyncSource::getPropertyValue(ManagementNode &node, const string &property)
@@ -142,47 +132,26 @@ RegisterSyncSource::RegisterSyncSource(const string &shortDescr,
     registry.push_back(this);
 }
 
+#if 0
 static ostream & operator << (ostream &out, const RegisterSyncSource &rhs)
 {
     out << rhs.m_shortDescr << (rhs.m_enabled ? " (enabled)" : " (disabled)");
 }
+#endif
 
 EvolutionSyncSource *const RegisterSyncSource::InactiveSource = (EvolutionSyncSource *)1;
 
-template<class T> string join(const string &sep, T begin, T end)
-{
-    stringstream res;
-
-    if (begin != end) {
-        res << *begin;
-        ++begin;
-        while (begin != end) {
-            res << sep;
-            res << *begin;
-        }
-    }
-
-    return res.str();
-}
-
-EvolutionSyncSource *EvolutionSyncSource::createSource(const EvolutionSyncSourceParams &params, bool error)
-{
-    string sourceTypeString = getSourceTypeString(params.m_nodes);
-    pair<string, string> sourceType = getSourceType(params.m_nodes);
-
-    static bool scannedModules;
-    static list<string> available;
-    static list<string> missing;
-
-    if (!scannedModules) {
+static class ScannedModules {
+public:
+    ScannedModules() {
+#ifdef ENABLE_MODULES
         list<string> *state;
 
-#ifdef ENABLE_MODULES
         // possible extension: scan directories for matching module names instead of hard-coding known names
         const char *modules[] = {
             "syncebook.so.0",
             "syncecal.so.0",
-	    "syncsqlite.so.0",
+            "syncsqlite.so.0",
             "addressbook.so.0",
             NULL
         };
@@ -195,13 +164,20 @@ EvolutionSyncSource *EvolutionSyncSource::createSource(const EvolutionSyncSource
             // module!
             dlhandle = dlopen(modules[i], RTLD_NOW|RTLD_GLOBAL);
             // remember which modules were found and which were not
-            state = dlhandle ? &available : &missing;
+            state = dlhandle ? &m_available : &m_missing;
             state->push_back(modules[i]);
         }
-#else
 #endif
-        scannedModules = true;
     }
+    list<string> m_available;
+    list<string> m_missing;
+} scannedModules;
+
+
+EvolutionSyncSource *EvolutionSyncSource::createSource(const EvolutionSyncSourceParams &params, bool error)
+{
+    string sourceTypeString = getSourceTypeString(params.m_nodes);
+    pair<string, string> sourceType = getSourceType(params.m_nodes);
 
     const SourceRegistry &registry(getSourceRegistry());
     for (SourceRegistry::const_iterator it = registry.begin();
@@ -219,88 +195,29 @@ EvolutionSyncSource *EvolutionSyncSource::createSource(const EvolutionSyncSource
 
     if (error) {
         string problem = params.m_name + ": type '" + sourceTypeString + "' not supported";
-        if (available.size()) {
+        if (scannedModules.m_available.size()) {
             problem += " by any of the backends (";
-            problem += join(string(", "), registry.begin(), registry.end());
+            problem += join(string(", "), scannedModules.m_available.begin(), scannedModules.m_available.end());
             problem += ")";
         }
-        if (missing.size()) {
+        if (scannedModules.m_missing.size()) {
             problem += ". The following backend(s) were not found: ";
-            problem += join(string(", "), missing.begin(), missing.end());
+            problem += join(string(", "), scannedModules.m_missing.begin(), scannedModules.m_missing.end());
         }
         EvolutionSyncClient::throwError(problem);
     }
 
-#if 0
-#ifdef ENABLE_EBOOK
-    return new EvolutionContactSource(params, EVC_FORMAT_VCARD_21);
-#else
-        if (error) {
-            EvolutionSyncClient::throwError(params.m_name + ": access to addressbooks not compiled into this binary, text/x-vcard not supported");
-        }
-#endif
-    } else if (sourceType == "text/vcard") {
-#ifdef ENABLE_EBOOK
-        return new EvolutionContactSource(params, EVC_FORMAT_VCARD_30);
-#else
-        if (error) {
-            EvolutionSyncClient::throwError(params.m_name + ": access to addressbooks not compiled into this binary, text/vcard not supported");
-        }
-#endif
-    } else if (sourceType == "text/x-todo") {
-#ifdef ENABLE_ECAL
-        return new EvolutionCalendarSource(E_CAL_SOURCE_TYPE_TODO, params);
-#else
-        if (error) {
-            EvolutionSyncClient::throwError(params.m_name + ": access to calendars not compiled into this binary, text/x-todo not supported");
-        }
-#endif
-    } else if (sourceType == "text/x-journal") {
-#ifdef ENABLE_ECAL
-        return new EvolutionCalendarSource(E_CAL_SOURCE_TYPE_JOURNAL, params);
-#else
-        if (error) {
-            EvolutionSyncClient::throwError(params.m_name + ": access to memos not compiled into this binary, text/x-journal not supported");
-        }
-#endif
-    } else if (sourceType == "text/plain") {
-#ifdef ENABLE_ECAL
-        return new EvolutionMemoSource(params);
-#else
-        if (error) {
-            EvolutionSyncClient::throwError(params.m_name + ": access to memos not compiled into this binary, text/plain not supported");
-        }
-#endif
-    } else if (sourceType == "text/calendar" ||
-               sourceType == "text/x-vcalendar") {
-#ifdef ENABLE_ECAL
-        return new EvolutionCalendarSource(E_CAL_SOURCE_TYPE_EVENT, params);
-#else
-        if (error) {
-            EvolutionSyncClient::throwError(params.m_name + ": access to calendars not compiled into this binary, " + sourceType + " not supported");
-        }
-#endif
-    } else if (sourceType == "sqlite") {
-#ifdef ENABLE_SQLITE
-        return new SQLiteContactSource(params);
-#else
-        if (error) {
-            EvolutionSyncClient::throwError(params.m_name + ": access to sqlite not compiled into this binary, " + sourceType + " not supported");
-        }
-#endif
-    } else if (sourceType == "addressbook") {
-#ifdef ENABLE_ADDRESSBOOK
-        return new AddressBookSource(nodes);
-#else
-        if (error) {
-            EvolutionSyncClient::throwError(params.m_name + ": access to Mac OS X address book not compiled into this binary, not supported");
-        }
-#endif
-    }
-#endif
-
-
     return NULL;
+}
+
+EvolutionSyncSource *EvolutionSyncSource::createTestingSource(const string &name, const string &type, bool error)
+{
+    EvolutionSyncConfig config("testing");
+    SyncSourceNodes nodes = config.getSyncSourceNodes(name);
+    EvolutionSyncSourceParams params(name, nodes, "");
+    PersistentEvolutionSyncSourceConfig sourceconfig(name, nodes);
+    sourceconfig.setSourceType(type);
+    return createSource(params, error);
 }
 
 int EvolutionSyncSource::beginSync()

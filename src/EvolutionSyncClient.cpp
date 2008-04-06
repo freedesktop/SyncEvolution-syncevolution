@@ -19,6 +19,7 @@
 
 #include "EvolutionSyncClient.h"
 #include "EvolutionSyncSource.h"
+#include "SyncEvolutionUtil.h"
 
 #include <posix/base/posixlog.h>
 
@@ -31,6 +32,10 @@
 #include <iostream>
 #include <stdexcept>
 using namespace std;
+
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/foreach.hpp>
 
 #include <sys/stat.h>
 #include <pwd.h>
@@ -47,8 +52,8 @@ EvolutionSyncClient::EvolutionSyncClient(const string &server,
     m_server(server),
     m_sources(sources),
     m_doLogging(doLogging),
-    m_quiet(false),
-    m_syncMode(SYNC_NONE)
+    m_syncMode(SYNC_NONE),
+    m_quiet(false)
 {
 }
 
@@ -56,38 +61,6 @@ EvolutionSyncClient::~EvolutionSyncClient()
 {
 }
 
-/// remove all files in the given directory and the directory itself
-static void rmBackupDir(const string &dirname)
-{
-    DIR *dir = opendir(dirname.c_str());
-    if (!dir) {
-        EvolutionSyncClient::throwError(dirname + ": " + strerror(errno));
-    }
-    vector<string> entries;
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) {
-        entries.push_back(entry->d_name);
-    }
-    closedir(dir);
-
-    for (vector<string>::iterator it = entries.begin();
-         it != entries.end();
-         ++it) {
-        string path = dirname + "/" + *it;
-        if (unlink(path.c_str())
-            && errno != ENOENT
-#ifdef EISDIR
-            && errno != EISDIR
-#endif
-            ) {
-            EvolutionSyncClient::throwError(path + ": " + strerror(errno));
-        }
-    }
-
-    if (rmdir(dirname.c_str())) {
-        EvolutionSyncClient::throwError(dirname + ": " + strerror(errno));
-    }
-}
 
 // this class owns the logging directory and is responsible
 // for redirecting output at the start and end of sync (even
@@ -250,19 +223,14 @@ public:
 
     /** find all entries in a given directory, return as sorted array */
     void getLogdirs(const string &logdir, vector<string> &entries) {
-        DIR *dir = opendir(logdir.c_str());
-        if (!dir) {
-            EvolutionSyncClient::throwError(m_logdir + ": " + strerror(errno));
-        }
-        struct dirent *entry;
-        while ((entry = readdir(dir)) != NULL) {
-            if (strlen(entry->d_name) >= m_prefix.size() &&
-                !m_prefix.compare(0, m_prefix.size(), entry->d_name, m_prefix.size())) {
-                entries.push_back(entry->d_name);
+        ReadDir dir(logdir);
+        for (ReadDir::const_iterator it = dir.begin();
+             it != dir.end();
+             ++it) {
+            if (boost::starts_with(*it, m_prefix)) {
+                entries.push_back(*it);
             }
         }
-        closedir(dir);
-                
         sort(entries.begin(), entries.end());
     }
 
@@ -273,14 +241,14 @@ public:
             vector<string> entries;
             getLogdirs(m_logdir, entries);
 
-            unsigned int deleted = 0;
+            int deleted = 0;
             for (vector<string>::iterator it = entries.begin();
-                 it != entries.end() && entries.size() - deleted > m_maxlogdirs;
+                 it != entries.end() && (int)entries.size() - deleted > m_maxlogdirs;
                  ++it, ++deleted) {
                 string path = m_logdir + "/" + *it;
                 string msg = "removing " + path;
                 LOG.info(msg.c_str());
-                rmBackupDir(path);
+                rm_r(path);
             }
         }
     }
@@ -323,7 +291,7 @@ class SourceList : public vector<EvolutionSyncSource *> {
     bool m_doLogging;    /**< true iff additional files are to be written during sync */
     SyncClient &m_client; /**< client which holds the sync report after a sync */
     bool m_reportTodo;   /**< true if syncDone() shall print a final report */
-    arrayptr<SyncSource *> m_sourceArray;  /** owns the array that is expected by SyncClient::sync() */
+    boost::scoped_array<SyncSource *> m_sourceArray;  /** owns the array that is expected by SyncClient::sync() */
     const bool m_quiet;  /**< avoid redundant printing to screen */
     string m_previousLogdir; /**< remember previous log dir before creating the new one */
 
@@ -581,17 +549,27 @@ public:
 
     /** returns current sources as array as expected by SyncClient::sync(), memory owned by this class */
     SyncSource **getSourceArray() {
-        m_sourceArray = new SyncSource *[size() + 1];
+        m_sourceArray.reset(new SyncSource *[size() + 1]);
 
         int index = 0;
         for (iterator it = begin();
              it != end();
              ++it) {
-            ((SyncSource **)m_sourceArray)[index] = *it;
+            m_sourceArray[index] = *it;
             index++;
         }
-        ((SyncSource **)m_sourceArray)[index] = 0;
-        return m_sourceArray;
+        m_sourceArray[index] = 0;
+        return &m_sourceArray[0];
+    }
+
+    /** returns names of active sources */
+    set<string> getSources() {
+        set<string> res;
+
+        BOOST_FOREACH(SyncSource *source, *this) {
+            res.insert(source->getName());
+        }
+        return res;
     }
    
     ~SourceList() {
@@ -622,6 +600,26 @@ public:
 void unref(SourceList *sourceList)
 {
     delete sourceList;
+}
+
+string EvolutionSyncClient::askPassword(const string &descr)
+{
+    char buffer[256];
+
+    printf("Enter password for %s: ",
+           descr.c_str());
+    fflush(stdout);
+    if (fgets(buffer, sizeof(buffer), stdin) &&
+        strcmp(buffer, "\n")) {
+        size_t len = strlen(buffer);
+        if (len && buffer[len - 1] == '\n') {
+            buffer[len - 1] = 0;
+        }
+        return buffer;
+    } else {
+        throwError(string("could not read password for ") + descr);
+        return "";
+    }
 }
 
 void EvolutionSyncClient::throwError(const string &error)
@@ -724,7 +722,7 @@ void EvolutionSyncClient::initSources(SourceList &sourceList)
         
         // is the source enabled?
         string sync = sc->getSync();
-        bool enabled = sync != "none" && sync != "";
+        bool enabled = sync != "disabled";
         bool overrideMode = false;
 
         // override state?
@@ -741,9 +739,12 @@ void EvolutionSyncClient::initSources(SourceList &sourceList)
         }
         
         if (enabled) {
+            string url = getSyncURL();
+            boost::replace_first(url, "https://", "http://"); // do not distinguish between protocol in change tracking
+            string changeId = string("sync4jevolution:") + url + "/" + name;
             EvolutionSyncSourceParams params(name,
                                              getSyncSourceNodes(name),
-                                             string("sync4jevolution:") + getSyncURL() + "/" + name);
+                                             changeId);
             // the sync mode has to be set before instantiating the source
             // because the client library reads the preferredSyncMode at that time:
             // have to take a shortcut and set the property via its name
@@ -756,9 +757,6 @@ void EvolutionSyncClient::initSources(SourceList &sourceList)
                 throwError(name + ": type unknown" );
             }
             sourceList.push_back(syncSource);
-            
-            // also open it; failing now is still safe
-            syncSource->open();    
         }
     }
 
@@ -805,17 +803,37 @@ int EvolutionSyncClient::sync()
         LOG.LOG_DEVELOPER("SyncML server account: %s", getUsername());
         LOG.LOG_DEVELOPER("client: SyncEvolution %s for %s",
                           getSwv(), getDevType());
-        time_t now = time(NULL);
-        LOG.LOG_DEVELOPER("current UTC date and time: %s", asctime(gmtime(&now)));
 
+        // instantiate backends, but do not open them yet
         initSources(sourceList);
 
-        // give derived class also a chance to update the configs
-        prepare(sourceList.getSourceArray());
+        // request all config properties once: throwing exceptions
+        // now is okay, whereas later it would lead to leaks in the
+        // not exception safe client library
+        EvolutionSyncConfig dummy;
+        set<string> activeSources = sourceList.getSources();
+        dummy.copy(*this, &activeSources);
 
         // start background thread if not running yet:
         // necessary to catch problems with Evolution backend
         startLoopThread();
+
+        // ask for passwords now
+        checkPassword(*this);
+        if (getUseProxy()) {
+            checkProxyPassword(*this);
+        }
+        BOOST_FOREACH(EvolutionSyncSource *source, sourceList) {
+            source->checkPassword(*this);
+        }
+
+        // open each source - failing now is still safe
+        BOOST_FOREACH(EvolutionSyncSource *source, sourceList) {
+            source->open();
+        }
+
+        // give derived class also a chance to update the configs
+        prepare(sourceList.getSourceArray());
 
         // ready to go: dump initial databases and prepare for final report
         sourceList.syncPrepare();

@@ -40,13 +40,13 @@ class FileConfigTree : public ConfigTree {
     FileConfigTree(const string &root,
                    bool oldLayout);
 
-
     /* ConfigTree API */
+    virtual string getRootPath() const;
     virtual void flush();
     virtual void reset();
     virtual boost::shared_ptr<ConfigNode> open(const string &path,
-                                               bool hidden,
-                                               const string &changeId = string(""));
+                                               PropertyType type,
+                                               const string &otherId = string(""));
     list<string> getChildren(const string &path);
 
  private:

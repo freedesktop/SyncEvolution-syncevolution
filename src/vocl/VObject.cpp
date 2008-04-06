@@ -230,7 +230,6 @@ static int hex2int( wchar_t x )
 void VObject::toNativeEncoding()
 {
     bool is_30 = !wcscmp(getVersion(), TEXT("3.0"));
-    bool is_21 = !wcscmp(getVersion(), TEXT("2.1"));
     // line break is encoded with either one or two
     // characters on different platforms
     const int linebreaklen = wcslen(SYNC4J_LINEBREAK);

@@ -1,84 +1,3 @@
-# ==8371== 316,411 (3,872 direct, 312,539 indirect) bytes in 121 blocks are definitely lost in loss record 17 of 64
-# ==8371==    at 0x4C21C16: malloc (vg_replace_malloc.c:149)
-# ==8371==    by 0x532FF85: pvl_new_element (pvl.c:105)
-# ==8371==    by 0x532FFE1: pvl_push (pvl.c:181)
-# ==8371==    by 0x5321837: icalparser_add_line (icalparser.c:791)
-# ==8371==    by 0x5321E7C: icalparser_parse (icalparser.c:587)
-# ==8371==    by 0x5322080: icalparser_parse_string (icalparser.c:1118)
-# ==8371==    by 0x53021F8: impl_notifyChanges (e-cal-listener.c:521)
-# ==8371==    by 0x660DE8D: ORBit_small_invoke_adaptor (in /usr/lib/libORBit-2.so.0.1.0)
-# ==8371==    by 0x661D224: (within /usr/lib/libORBit-2.so.0.1.0)
-# ==8371==    by 0x661D809: (within /usr/lib/libORBit-2.so.0.1.0)
-# ==8371==    by 0x66072F4: giop_thread_queue_process (in /usr/lib/libORBit-2.so.0.1.0)
-# ==8371==    by 0x6607A9E: (within /usr/lib/libORBit-2.so.0.1.0)
-{
-   ical ORBit adaptor I
-   Memcheck:Leak
-   fun:malloc
-   fun:pvl_new_element
-   fun:pvl_push
-   fun:icalparser_add_line
-   fun:icalparser_parse
-   fun:icalparser_parse_string
-   fun:impl_notifyChanges
-   fun:ORBit_small_invoke_adaptor
-}
-
-# ==8371== 5,660 (56 direct, 5,604 indirect) bytes in 1 blocks are definitely lost in loss record 22 of 64
-# ==8371==    at 0x4C21C16: malloc (vg_replace_malloc.c:149)
-# ==8371==    by 0x5323129: icalproperty_new_impl (icalproperty.c:102)
-# ==8371==    by 0x5321802: icalparser_add_line (icalparser.c:782)
-# ==8371==    by 0x5321E7C: icalparser_parse (icalparser.c:587)
-# ==8371==    by 0x5322080: icalparser_parse_string (icalparser.c:1118)
-# ==8371==    by 0x53021F8: impl_notifyChanges (e-cal-listener.c:521)
-# ==8371==    by 0x660DE8D: ORBit_small_invoke_adaptor (in /usr/lib/libORBit-2.so.0.1.0)
-# ==8371==    by 0x661D224: (within /usr/lib/libORBit-2.so.0.1.0)
-# ==8371==    by 0x661D809: (within /usr/lib/libORBit-2.so.0.1.0)
-# ==8371==    by 0x66072F4: giop_thread_queue_process (in /usr/lib/libORBit-2.so.0.1.0)
-# ==8371==    by 0x6607A9E: (within /usr/lib/libORBit-2.so.0.1.0)
-# ==8371==    by 0x70F4448: (within /usr/lib/libglib-2.0.so.0.1400.1)
-{
-   ical ORBit adaptor II
-   Memcheck:Leak
-   fun:malloc
-   fun:icalproperty_new_impl
-   fun:icalparser_add_line
-   fun:icalparser_parse
-   fun:icalparser_parse_string
-   fun:impl_notifyChanges
-   fun:ORBit_small_invoke_adaptor
-}
-
-# ==8371== 74,665 (1,960 direct, 72,705 indirect) bytes in 49 blocks are definitely lost in loss record 20 of 64
-# ==8371==    at 0x4C21C16: malloc (vg_replace_malloc.c:149)
-# ==8371==    by 0x53301FD: pvl_newlist (pvl.c:59)
-# ==8371==    by 0x531F363: icalcomponent_new_impl (icalcomponent.c:129)
-# ==8371==    by 0x531F3D7: icalcomponent_new_clone (icalcomponent.c:187)
-# ==8371==    by 0x53001C2: e_cal_component_clone (e-cal-component.c:518)
-# ==8371==    by 0x52EFB0F: cal_get_changes_cb (e-cal.c:843)
-# ==8371==    by 0x6E68999: g_closure_invoke (in /usr/lib/libgobject-2.0.so.0.1400.1)
-# ==8371==    by 0x6E786B7: (within /usr/lib/libgobject-2.0.so.0.1400.1)
-# ==8371==    by 0x6E79AF2: g_signal_emit_valist (in /usr/lib/libgobject-2.0.so.0.1400.1)
-# ==8371==    by 0x6E79CC2: g_signal_emit (in /usr/lib/libgobject-2.0.so.0.1400.1)
-# ==8371==    by 0x5302283: impl_notifyChanges (e-cal-listener.c:559)
-# ==8371==    by 0x660DE8D: ORBit_small_invoke_adaptor (in /usr/lib/libORBit-2.so.0.1.0)
-{
-   ical ORBit adaptor III
-   Memcheck:Leak
-   fun:malloc
-   fun:pvl_newlist
-   fun:icalcomponent_new_impl
-   fun:icalcomponent_new_clone
-   fun:e_cal_component_clone
-   fun:cal_get_changes_cb
-   fun:g_closure_invoke
-   obj:*libgobject-2.0.so*
-   fun:g_signal_emit_valist
-   fun:g_signal_emit
-   fun:impl_notifyChanges
-   fun:ORBit_small_invoke_adaptor
-}
-
 # ==8371== 556 bytes in 22 blocks are possibly lost in loss record 45 of 64
 # ==8371==    at 0x4C21C16: malloc (vg_replace_malloc.c:149)
 # ==8371==    by 0x70D842A: g_malloc (in /usr/lib/libglib-2.0.so.0.1400.1)
@@ -183,10 +102,9 @@
    Memcheck:Leak
    fun:calloc
    fun:g_malloc0
-   fun:type_node_any_new_W
-   fun:type_node_fundamental_new_W
+   obj:*libgobject-2.0*
+   obj:*libgobject-2.0*
    fun:g_type_init_with_debug_flags
-   fun:g_type_init
 }
 
 # ==14222== Syscall param writev(vector[...]) points to uninitialised byte(s)
@@ -361,6 +279,184 @@
    fun:setup_books
 }
 
+# ==17723== 152 (88 direct, 64 indirect) bytes in 1 blocks are definitely lost in loss record 11 of 24
+# ==17723==    at 0x4C21C16: malloc (vg_replace_malloc.c:149)
+# ==17723==    by 0x755E42A: g_malloc (in /usr/lib/libglib-2.0.so.0.1400.1)
+# ==17723==    by 0x7571917: g_slice_alloc (in /usr/lib/libglib-2.0.so.0.1400.1)
+# ==17723==    by 0x7572085: g_slice_alloc0 (in /usr/lib/libglib-2.0.so.0.1400.1)
+# ==17723==    by 0x730D9EE: g_type_create_instance (in /usr/lib/libgobject-2.0.so.0.1400.1)
+# ==17723==    by 0x72F522C: (within /usr/lib/libgobject-2.0.so.0.1400.1)
+# ==17723==    by 0x66046C4: (within /usr/lib/libbonobo-2.so.0.0.0)
+# ==17723==    by 0x72F3663: g_object_newv (in /usr/lib/libgobject-2.0.so.0.1400.1)
+# ==17723==    by 0x72F40AB: g_object_new_valist (in /usr/lib/libgobject-2.0.so.0.1400.1)
+# ==17723==    by 0x72F42E0: g_object_new (in /usr/lib/libgobject-2.0.so.0.1400.1)
+# ==17723==    by 0x65FA702: bonobo_moniker_context_new (in /usr/lib/libbonobo-2.so.0.0.0)
+# ==17723==    by 0x65FB988: bonobo_context_init (in /usr/lib/libbonobo-2.so.0.0.0)
+# ==17723==    by 0x65FF436: bonobo_init_full (in /usr/lib/libbonobo-2.so.0.0.0)
+# ==17723==    by 0x53568A9: e_book_new (e-book.c:3786)
+# ==17723==    by 0x4B2686: EvolutionContactSource::open() (EvolutionContactSource.cpp:124)
+# ==17723==    by 0x41236C: TestEvolutionSyncSource<EvolutionContactSource>::beginSync() (client-test-app.cpp:146)
+# ==17723==    by 0x491A02: LocalTests::insert(CreateSource, char const*) (ClientTest.cpp:202)
+# ==17723==    by 0x43D708: LocalTests::testLocalDeleteAll() (ClientTest.cpp:513)
+# ==17723==    by 0x473F74: LocalTests::testImport() (ClientTest.cpp:662)
+# ==17723==    by 0x4A321B: CppUnit::TestCaller<LocalTests>::runTest() (TestCaller.h:166)
+# ==17723==    by 0x4E51166: CppUnit::TestCaseMethodFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17723==    by 0x4E435C3: CppUnit::DefaultProtector::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17723==    by 0x4E4D228: CppUnit::ProtectorChain::ProtectFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17723==    by 0x4E4CF77: CppUnit::ProtectorChain::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17723==    by 0x4E58C5F: CppUnit::TestResult::protect(CppUnit::Functor const&, CppUnit::Test*, std::string const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17723==    by 0x4E50E3F: CppUnit::TestCase::run(CppUnit::TestResult*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17723==    by 0x4E58A39: CppUnit::TestResult::runTest(CppUnit::Test*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17723==    by 0x4E5B081: CppUnit::TestRunner::run(CppUnit::TestResult&, std::string const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17723==    by 0x4E5E04A: CppUnit::TextTestRunner::run(std::string, bool, bool, bool) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17723==    by 0x4A6644: main (client-test-main.cpp:229)
+{
+   e_book_new
+   Memcheck:Leak
+   fun:malloc
+   fun:g_malloc
+   fun:g_slice_alloc
+   fun:g_slice_alloc0
+   fun:g_type_create_instance
+   obj:*libgobject-2.0.so*
+   obj:*libbonobo-2.so*
+   fun:g_object_newv
+   fun:g_object_new_valist
+   fun:g_object_new
+   fun:bonobo_moniker_context_new
+   fun:bonobo_context_init
+   fun:bonobo_init_full
+   fun:e_book_new
+}
+
+# ==17763== 11,376 bytes in 271 blocks are possibly lost in loss record 20 of 23
+# ==17763==    at 0x4C20F3F: calloc (vg_replace_malloc.c:279)
+# ==17763==    by 0x755E3B1: g_malloc0 (in /usr/lib/libglib-2.0.so.0.1400.1)
+# ==17763==    by 0x6A97856: ORBit_alloc_by_tc (in /usr/lib/libORBit-2.so.0.1.0)
+# ==17763==    by 0x6AA10C6: (within /usr/lib/libORBit-2.so.0.1.0)
+# ==17763==    by 0x6A9ED64: IOP_generate_profiles (in /usr/lib/libORBit-2.so.0.1.0)
+# ==17763==    by 0x6A95DE0: ORBit_marshal_object (in /usr/lib/libORBit-2.so.0.1.0)
+# ==17763==    by 0x6A9BCF7: ORBit_marshal_value (in /usr/lib/libORBit-2.so.0.1.0)
+# ==17763==    by 0x6A92F93: (within /usr/lib/libORBit-2.so.0.1.0)
+# ==17763==    by 0x6A9442C: ORBit_small_invoke_stub (in /usr/lib/libORBit-2.so.0.1.0)
+# ==17763==    by 0x534F39A: GNOME_Evolution_Addressbook_BookFactory_getBook (Evolution-DataServer-Addressbook-stubs.c:330)
+# ==17763==    by 0x53566F6: e_book_new (e-book.c:3336)
+# ==17763==    by 0x4B2686: EvolutionContactSource::open() (EvolutionContactSource.cpp:124)
+# ==17763==    by 0x41236C: TestEvolutionSyncSource<EvolutionContactSource>::beginSync() (client-test-app.cpp:146)
+# ==17763==    by 0x485481: LocalTests::testChanges() (ClientTest.cpp:619)
+# ==17763==    by 0x4A321B: CppUnit::TestCaller<LocalTests>::runTest() (TestCaller.h:166)
+# ==17763==    by 0x4E51166: CppUnit::TestCaseMethodFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17763==    by 0x4E435C3: CppUnit::DefaultProtector::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17763==    by 0x4E4D228: CppUnit::ProtectorChain::ProtectFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17763==    by 0x4E4CF77: CppUnit::ProtectorChain::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17763==    by 0x4E58C5F: CppUnit::TestResult::protect(CppUnit::Functor const&, CppUnit::Test*, std::string const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17763==    by 0x4E50E3F: CppUnit::TestCase::run(CppUnit::TestResult*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17763==    by 0x4E58A39: CppUnit::TestResult::runTest(CppUnit::Test*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17763==    by 0x4E5B081: CppUnit::TestRunner::run(CppUnit::TestResult&, std::string const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17763==    by 0x4E5E04A: CppUnit::TextTestRunner::run(std::string, bool, bool, bool) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17763==    by 0x4A6644: main (client-test-main.cpp:229)
+{
+   e_book_new II
+   Memcheck:Leak
+   fun:calloc
+   fun:g_malloc0
+   fun:ORBit_alloc_by_tc
+   obj:*libORBit-2.so*
+   fun:IOP_generate_profiles
+   fun:ORBit_marshal_object
+   fun:ORBit_marshal_value
+   obj:*libORBit-2.so*
+   fun:ORBit_small_invoke_stub
+   fun:GNOME_Evolution_Addressbook_BookFactory_getBook
+   fun:e_book_new
+}
+
+# ==17771== 11,376 bytes in 271 blocks are possibly lost in loss record 20 of 23
+# ==17771==    at 0x4C20F3F: calloc (vg_replace_malloc.c:279)
+# ==17771==    by 0x755E3B1: g_malloc0 (in /usr/lib/libglib-2.0.so.0.1400.1)
+# ==17771==    by 0x6A97856: ORBit_alloc_by_tc (in /usr/lib/libORBit-2.so.0.1.0)
+# ==17771==    by 0x6A9DA7A: (within /usr/lib/libORBit-2.so.0.1.0)
+# ==17771==    by 0x6A9E704: ORBit_demarshal_IOR (in /usr/lib/libORBit-2.so.0.1.0)
+# ==17771==    by 0x6A961F4: ORBit_demarshal_object (in /usr/lib/libORBit-2.so.0.1.0)
+# ==17771==    by 0x6A9C213: ORBit_demarshal_value (in /usr/lib/libORBit-2.so.0.1.0)
+# ==17771==    by 0x6A9366E: (within /usr/lib/libORBit-2.so.0.1.0)
+# ==17771==    by 0x6A94482: ORBit_small_invoke_stub (in /usr/lib/libORBit-2.so.0.1.0)
+# ==17771==    by 0x534F39A: GNOME_Evolution_Addressbook_BookFactory_getBook (Evolution-DataServer-Addressbook-stubs.c:330)
+# ==17771==    by 0x53566F6: e_book_new (e-book.c:3336)
+# ==17771==    by 0x4B2686: EvolutionContactSource::open() (EvolutionContactSource.cpp:124)
+# ==17771==    by 0x41236C: TestEvolutionSyncSource<EvolutionContactSource>::beginSync() (client-test-app.cpp:146)
+# ==17771==    by 0x485481: LocalTests::testChanges() (ClientTest.cpp:619)
+# ==17771==    by 0x4A321B: CppUnit::TestCaller<LocalTests>::runTest() (TestCaller.h:166)
+# ==17771==    by 0x4E51166: CppUnit::TestCaseMethodFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17771==    by 0x4E435C3: CppUnit::DefaultProtector::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17771==    by 0x4E4D228: CppUnit::ProtectorChain::ProtectFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17771==    by 0x4E4CF77: CppUnit::ProtectorChain::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17771==    by 0x4E58C5F: CppUnit::TestResult::protect(CppUnit::Functor const&, CppUnit::Test*, std::string const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17771==    by 0x4E50E3F: CppUnit::TestCase::run(CppUnit::TestResult*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17771==    by 0x4E58A39: CppUnit::TestResult::runTest(CppUnit::Test*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17771==    by 0x4E5B081: CppUnit::TestRunner::run(CppUnit::TestResult&, std::string const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17771==    by 0x4E5E04A: CppUnit::TextTestRunner::run(std::string, bool, bool, bool) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17771==    by 0x4A6644: main (client-test-main.cpp:229)
+{
+   e_book_new III
+   Memcheck:Leak
+   fun:calloc
+   fun:g_malloc0
+   fun:*
+   obj:*libORBit-2.so*
+   fun:ORBit_demarshal_IOR
+   fun:ORBit_demarshal_object
+   fun:ORBit_demarshal_value
+   obj:*libORBit-2.so*
+   fun:ORBit_small_invoke_stub
+   fun:GNOME_Evolution_Addressbook_BookFactory_getBook
+   fun:e_book_new
+}
+
+# ==17790== 22,280 bytes in 553 blocks are possibly lost in loss record 19 of 25
+# ==17790==    at 0x4C20F3F: calloc (vg_replace_malloc.c:279)
+# ==17790==    by 0x755E3B1: g_malloc0 (in /usr/lib/libglib-2.0.so.0.1400.1)
+# ==17790==    by 0x6A978D7: ORBit_alloc_tcval (in /usr/lib/libORBit-2.so.0.1.0)
+# ==17790==    by 0x6AA141D: (within /usr/lib/libORBit-2.so.0.1.0)
+# ==17790==    by 0x6AA1664: PortableServer_POA_servant_to_reference (in /usr/lib/libORBit-2.so.0.1.0)
+# ==17790==    by 0x6604826: (within /usr/lib/libbonobo-2.so.0.0.0)
+# ==17790==    by 0x72F3663: g_object_newv (in /usr/lib/libgobject-2.0.so.0.1400.1)
+# ==17790==    by 0x72F413D: g_object_new_valist (in /usr/lib/libgobject-2.0.so.0.1400.1)
+# ==17790==    by 0x72F42E0: g_object_new (in /usr/lib/libgobject-2.0.so.0.1400.1)
+# ==17790==    by 0x5356627: e_book_new (e-book.c:3309)
+# ==17790==    by 0x4B2686: EvolutionContactSource::open() (EvolutionContactSource.cpp:124)
+# ==17790==    by 0x41236C: TestEvolutionSyncSource<EvolutionContactSource>::beginSync() (client-test-app.cpp:146)
+# ==17790==    by 0x493FC9: LocalTests::insert(CreateSource, char const*) (ClientTest.cpp:221)
+# ==17790==    by 0x43D708: LocalTests::testLocalDeleteAll() (ClientTest.cpp:513)
+# ==17790==    by 0x4760A1: LocalTests::testChanges() (ClientTest.cpp:539)
+# ==17790==    by 0x4A321B: CppUnit::TestCaller<LocalTests>::runTest() (TestCaller.h:166)
+# ==17790==    by 0x4E51166: CppUnit::TestCaseMethodFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17790==    by 0x4E435C3: CppUnit::DefaultProtector::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17790==    by 0x4E4D228: CppUnit::ProtectorChain::ProtectFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17790==    by 0x4E4CF77: CppUnit::ProtectorChain::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17790==    by 0x4E58C5F: CppUnit::TestResult::protect(CppUnit::Functor const&, CppUnit::Test*, std::string const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17790==    by 0x4E50E3F: CppUnit::TestCase::run(CppUnit::TestResult*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17790==    by 0x4E5173B: CppUnit::TestComposite::doRunChildTests(CppUnit::TestResult*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17790==    by 0x4E51665: CppUnit::TestComposite::run(CppUnit::TestResult*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17790==    by 0x4E58A39: CppUnit::TestResult::runTest(CppUnit::Test*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17790==    by 0x4E5B081: CppUnit::TestRunner::run(CppUnit::TestResult&, std::string const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17790==    by 0x4E5E04A: CppUnit::TextTestRunner::run(std::string, bool, bool, bool) (in /usr/lib/libcppunit-1.12.so.0.0.0)
+# ==17790==    by 0x4A6644: main (client-test-main.cpp:229)
+{
+   e_book_new IV
+   Memcheck:Leak
+   fun:calloc
+   fun:g_malloc0
+   fun:*
+   obj:*libORBit-2.so*
+   fun:PortableServer_POA_servant_to_reference
+   obj:*libbonobo-2.so*
+   fun:g_object_newv
+   fun:g_object_new_valist
+   fun:g_object_new
+   fun:e_book_new
+}
+
 # ==12548== Syscall param write(buf) points to uninitialised byte(s)
 # ==12548==    at 0x4000792: (within /lib/ld-2.3.6.so)
 # ==12548==    by 0x4593384: (within /lib/tls/i686/cmov/libc-2.3.6.so)
@@ -403,76 +499,6 @@
    fun:e_data_book_factory_activate
    fun:setup_books
 }
-
-# ==14222== 2,188 bytes in 28 blocks are possibly lost in loss record 19 of 39
-# ==14222==    at 0x401D4B0: malloc (vg_replace_malloc.c:149)
-# ==14222==    by 0x42DCA95: g_malloc (gmem.c:131)
-# ==14222==    by 0x42F1E32: g_slice_alloc (gslice.c:824)
-# ==14222==    by 0x42F2514: g_slice_alloc0 (gslice.c:833)
-# ==14222==    by 0x40A2C5C: e_vcard_attribute_new (e-vcard.c:1018)
-# ==14222==    by 0x40A1BB3: read_attribute (e-vcard.c:529)
-# ==14222==    by 0x40A1EF1: parse (e-vcard.c:629)
-# ==14222==    by 0x40A238D: e_vcard_construct (e-vcard.c:749)
-# ==14222==    by 0x4096A2E: e_contact_new_from_vcard (e-contact.c:1230)
-# ==14222==    by 0x409187B: e_book_handle_response (e-book.c:3090)
-# ==14222==    by 0x427AF84: g_cclosure_marshal_VOID__POINTER (gmarshal.c:601)
-# ==14222==    by 0x426D2CA: g_closure_invoke (gclosure.c:490)
-# ==14222==    by 0x427F4D2: signal_emit_unlocked_R (gsignal.c:2440)
-# ==14222==    by 0x4280EF2: g_signal_emit_valist (gsignal.c:2199)
-# ==14222==    by 0x4281198: g_signal_emit (gsignal.c:2243)
-# ==14222==    by 0x4085A8A: impl_BookListener_respond_get_contact (e-book-listener.c:136)
-# ==14222==    by 0x4080C70: _ORBIT_skel_small_GNOME_Evolution_Addressbook_BookListener_notifyContactRequested (Evolution-DataServer-Addressbook-common.c:144)
-# ==14222==    by 0x4846436: ORBit_POAObject_invoke (poa.c:1142)
-# ==14222==    by 0x484C664: ORBit_OAObject_invoke (orbit-adaptor.c:338)
-# ==14222==    by 0x48395D8: ORBit_small_invoke_adaptor (orbit-small.c:844)
-{
-   e_contact_new_from_vcard
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_slice_alloc
-   fun:g_slice_alloc0
-   fun:e_vcard_attribute_new
-   fun:read_attribute
-   fun:parse
-   fun:e_vcard_construct
-   fun:e_contact_new_from_vcard
-}
-
-# ==32303== 3,129,704 (35,980 direct, 3,093,724 indirect) bytes in 2,167 blocks are definitely lost in loss record 35 of 39
-# ==32303==    at 0x401D4B0: malloc (vg_replace_malloc.c:149)
-# ==32303==    by 0x42DCA95: g_malloc (gmem.c:131)
-# ==32303==    by 0x42F1E32: g_slice_alloc (gslice.c:824)
-# ==32303==    by 0x42D2945: g_list_prepend (glist.c:95)
-# ==32303==    by 0x40A3100: e_vcard_add_attribute (e-vcard.c:1144)
-# ==32303==    by 0x40A1F2E: parse (e-vcard.c:635)
-# ==32303==    by 0x40A238D: e_vcard_construct (e-vcard.c:749)
-# ==32303==    by 0x4096A2E: e_contact_new_from_vcard (e-contact.c:1230)
-# ==32303==    by 0x409187B: e_book_handle_response (e-book.c:3090)
-# ==32303==    by 0x427AF84: g_cclosure_marshal_VOID__POINTER (gmarshal.c:601)
-# ==32303==    by 0x426D2CA: g_closure_invoke (gclosure.c:490)
-# ==32303==    by 0x427F4D2: signal_emit_unlocked_R (gsignal.c:2440)
-# ==32303==    by 0x4280EF2: g_signal_emit_valist (gsignal.c:2199)
-# ==32303==    by 0x4281198: g_signal_emit (gsignal.c:2243)
-# ==32303==    by 0x4085A8A: impl_BookListener_respond_get_contact (e-book-listener.c:136)
-# ==32303==    by 0x4080C70: _ORBIT_skel_small_GNOME_Evolution_Addressbook_BookListener_notifyContactRequested (Evolution-DataServer-Addressbook-common.c:144)
-# ==32303==    by 0x4846436: ORBit_POAObject_invoke (poa.c:1142)
-# ==32303==    by 0x484C664: ORBit_OAObject_invoke (orbit-adaptor.c:338)
-# ==32303==    by 0x48395D8: ORBit_small_invoke_adaptor (orbit-small.c:844)
-# ==32303==    by 0x484A2B9: ORBit_POAObject_handle_request (poa.c:1351)
-{
-   e_contact_new_from_vcard II
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_slice_alloc
-   fun:g_list_prepend
-   fun:e_vcard_add_attribute
-   fun:parse
-   fun:e_vcard_construct
-   fun:e_contact_new_from_vcard
-}
-
 
 # ==14222== 21,532 bytes in 564 blocks are possibly lost in loss record 24 of 39
 # ==14222==    at 0x401C7EF: calloc (vg_replace_malloc.c:279)
@@ -565,226 +591,6 @@
    fun:__memp_sync_int_eds
    fun:__memp_fsync_eds
    fun:__db_sync_eds
-}
-
-# ==32756== 23,294 bytes in 36 blocks are possibly lost in loss record 24 of 39
-# ==32756==    at 0x401D4B0: malloc (vg_replace_malloc.c:149)
-# ==32756==    by 0x42DCA95: g_malloc (gmem.c:131)
-# ==32756==    by 0x42F1E32: g_slice_alloc (gslice.c:824)
-# ==32756==    by 0x42D2945: g_list_prepend (glist.c:95)
-# ==32756==    by 0x40A3A7B: e_vcard_attribute_add_param (e-vcard.c:1494)
-# ==32756==    by 0x40A1892: read_attribute_params (e-vcard.c:439)
-# ==32756==    by 0x40A1C16: read_attribute (e-vcard.c:536)
-# ==32756==    by 0x40A1EF1: parse (e-vcard.c:629)
-# ==32756==    by 0x40A238D: e_vcard_construct (e-vcard.c:749)
-# ==32756==    by 0x4096A2E: e_contact_new_from_vcard (e-contact.c:1230)
-# ==32756==    by 0x409187B: e_book_handle_response (e-book.c:3090)
-# ==32756==    by 0x427AF84: g_cclosure_marshal_VOID__POINTER (gmarshal.c:601)
-# ==32756==    by 0x426D2CA: g_closure_invoke (gclosure.c:490)
-# ==32756==    by 0x427F4D2: signal_emit_unlocked_R (gsignal.c:2440)
-# ==32756==    by 0x4280EF2: g_signal_emit_valist (gsignal.c:2199)
-# ==32756==    by 0x4281198: g_signal_emit (gsignal.c:2243)
-# ==32756==    by 0x4085A8A: impl_BookListener_respond_get_contact (e-book-listener.c:136)
-# ==32756==    by 0x4080C70: _ORBIT_skel_small_GNOME_Evolution_Addressbook_BookListener_notifyContactRequested (Evolution-DataServer-Addressbook-common.c:144)
-# ==32756==    by 0x4846436: ORBit_POAObject_invoke (poa.c:1142)
-# ==32756==    by 0x484C664: ORBit_OAObject_invoke (orbit-adaptor.c:338)
-{
-   e_contact_new_from_vcard
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_slice_alloc
-   fun:g_list_prepend
-   fun:e_vcard_attribute_add_param
-   fun:read_attribute_params
-   fun:read_attribute
-   fun:parse
-   fun:e_vcard_construct
-   fun:e_contact_new_from_vcard
-}
-
-{
-   e_contact_new_from_vcard II
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_strdup
-   fun:e_vcard_attribute_add_value
-   fun:read_attribute_value
-   fun:read_attribute
-   fun:parse
-   fun:e_vcard_construct
-   fun:e_contact_new_from_vcard
-}
-# ==427== 3,129,306 (36,700 direct, 3,092,606 indirect) bytes in 2,227 blocks are definitely lost in loss record 40 of 40
-# ==427==    at 0x401D4B0: malloc (vg_replace_malloc.c:149)
-# ==427==    by 0x42DCA95: g_malloc (gmem.c:131)
-# ==427==    by 0x42F1E32: g_slice_alloc (gslice.c:824)
-# ==427==    by 0x42D2945: g_list_prepend (glist.c:95)
-# ==427==    by 0x40A3100: e_vcard_add_attribute (e-vcard.c:1144)
-# ==427==    by 0x40A1F2E: parse (e-vcard.c:635)
-# ==427==    by 0x40A238D: e_vcard_construct (e-vcard.c:749)
-# ==427==    by 0x4096A2E: e_contact_new_from_vcard (e-contact.c:1230)
-# ==427==    by 0x4085B27: impl_BookListener_respond_get_contact_list (e-book-listener.c:161)
-# ==427==    by 0x4080CB6: _ORBIT_skel_small_GNOME_Evolution_Addressbook_BookListener_notifyContactListRequested (Evolution-DataServer-Addressbook-common.c:148)
-# ==427==    by 0x4846436: ORBit_POAObject_invoke (poa.c:1142)
-# ==427==    by 0x484C664: ORBit_OAObject_invoke (orbit-adaptor.c:338)
-# ==427==    by 0x48395D8: ORBit_small_invoke_adaptor (orbit-small.c:844)
-# ==427==    by 0x484A2B9: ORBit_POAObject_handle_request (poa.c:1351)
-# ==427==    by 0x484A95B: ORBit_POAObject_invoke_incoming_request (poa.c:1421)
-# ==427==    by 0x484A9E0: poa_invoke_at_idle (poa.c:1469)
-# ==427==    by 0x42D2DB0: g_idle_dispatch (gmain.c:4142)
-# ==427==    by 0x42D499A: g_main_context_dispatch (gmain.c:2064)
-# ==427==    by 0x42D7EB5: g_main_context_iterate (gmain.c:2697)
-# ==427==    by 0x42D8276: g_main_loop_run (gmain.c:2905)
-{
-   e_contact_new_from_vcard III
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_slice_alloc
-   fun:g_list_prepend
-   fun:e_vcard_add_attribute
-   fun:parse
-   fun:e_vcard_construct
-   fun:e_contact_new_from_vcard
-}
-
-# ==1728== 3,135,701 (36,808 direct, 3,098,893 indirect) bytes in 2,232 blocks are definitely lost in loss record 37 of 39
-# ==1728==    at 0x401D4B0: malloc (vg_replace_malloc.c:149)
-# ==1728==    by 0x42DCA95: g_malloc (gmem.c:131)
-# ==1728==    by 0x42F1E32: g_slice_alloc (gslice.c:824)
-# ==1728==    by 0x42F2514: g_slice_alloc0 (gslice.c:833)
-# ==1728==    by 0x428EC2B: g_type_create_instance (gtype.c:1549)
-# ==1728==    by 0x4273B21: g_object_constructor (gobject.c:1046)
-# ==1728==    by 0x4274308: g_object_newv (gobject.c:937)
-# ==1728==    by 0x4274EE6: g_object_new_valist (gobject.c:986)
-# ==1728==    by 0x427509F: g_object_new (gobject.c:795)
-# ==1728==    by 0x4096A06: e_contact_new_from_vcard (e-contact.c:1229)
-# ==1728==    by 0x409187B: e_book_handle_response (e-book.c:3090)
-# ==1728==    by 0x427AF84: g_cclosure_marshal_VOID__POINTER (gmarshal.c:601)
-# ==1728==    by 0x426D2CA: g_closure_invoke (gclosure.c:490)
-# ==1728==    by 0x427F4D2: signal_emit_unlocked_R (gsignal.c:2440)
-# ==1728==    by 0x4280EF2: g_signal_emit_valist (gsignal.c:2199)
-# ==1728==    by 0x4281198: g_signal_emit (gsignal.c:2243)
-# ==1728==    by 0x4085A8A: impl_BookListener_respond_get_contact (e-book-listener.c:136)
-# ==1728==    by 0x4080C70: _ORBIT_skel_small_GNOME_Evolution_Addressbook_BookListener_notifyContactRequested (Evolution-DataServer-Addressbook-common.c:144)
-# ==1728==    by 0x4846436: ORBit_POAObject_invoke (poa.c:1142)
-# ==1728==    by 0x484C664: ORBit_OAObject_invoke (orbit-adaptor.c:338)
-{
-   e_contact_new_from_vcard IV
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_slice_alloc
-   fun:g_slice_alloc0
-   fun:g_type_create_instance
-   fun:g_object_constructor
-   fun:g_object_newv
-   fun:g_object_new_valist
-   fun:g_object_new
-   fun:e_contact_new_from_vcard
-}
-
-# ==1953== 17,230 bytes in 34 blocks are possibly lost in loss record 23 of 39
-# ==1953==    at 0x401D4B0: malloc (vg_replace_malloc.c:149)
-# ==1953==    by 0x42DCA95: g_malloc (gmem.c:131)
-# ==1953==    by 0x42F1E32: g_slice_alloc (gslice.c:824)
-# ==1953==    by 0x42D299A: g_list_append (glist.c:69)
-# ==1953==    by 0x40A3332: e_vcard_attribute_add_value (e-vcard.c:1207)
-# ==1953==    by 0x40A136D: read_attribute_value (e-vcard.c:302)
-# ==1953==    by 0x40A1C71: read_attribute (e-vcard.c:543)
-# ==1953==    by 0x40A1EF1: parse (e-vcard.c:629)
-# ==1953==    by 0x40A238D: e_vcard_construct (e-vcard.c:749)
-# ==1953==    by 0x4096A2E: e_contact_new_from_vcard (e-contact.c:1230)
-# ==1953==    by 0x409187B: e_book_handle_response (e-book.c:3090)
-# ==1953==    by 0x427AF84: g_cclosure_marshal_VOID__POINTER (gmarshal.c:601)
-# ==1953==    by 0x426D2CA: g_closure_invoke (gclosure.c:490)
-# ==1953==    by 0x427F4D2: signal_emit_unlocked_R (gsignal.c:2440)
-# ==1953==    by 0x4280EF2: g_signal_emit_valist (gsignal.c:2199)
-# ==1953==    by 0x4281198: g_signal_emit (gsignal.c:2243)
-# ==1953==    by 0x4085A8A: impl_BookListener_respond_get_contact (e-book-listener.c:136)
-# ==1953==    by 0x4080C70: _ORBIT_skel_small_GNOME_Evolution_Addressbook_BookListener_notifyContactRequested (Evolution-DataServer-Addressbook-common.c:144)
-# ==1953==    by 0x4846436: ORBit_POAObject_invoke (poa.c:1142)
-# ==1953==    by 0x484C664: ORBit_OAObject_invoke (orbit-adaptor.c:338)
-{
-   e_contact_new_from_vcard V
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_slice_alloc
-   fun:g_list_append
-   fun:e_vcard_attribute_add_value
-   fun:read_attribute_value
-   fun:read_attribute
-   fun:parse
-   fun:e_vcard_construct
-   fun:e_contact_new_from_vcard
-}
-
-# ==2126== 15,787 bytes in 36 blocks are possibly lost in loss record 23 of 39
-# ==2126==    at 0x401D4B0: malloc (vg_replace_malloc.c:149)
-# ==2126==    by 0x42DCA95: g_malloc (gmem.c:131)
-# ==2126==    by 0x42F5618: g_strdup (gstrfuncs.c:92)
-# ==2126==    by 0x40A2C7C: e_vcard_attribute_new (e-vcard.c:1021)
-# ==2126==    by 0x40A1BB3: read_attribute (e-vcard.c:529)
-# ==2126==    by 0x40A1EF1: parse (e-vcard.c:629)
-# ==2126==    by 0x40A238D: e_vcard_construct (e-vcard.c:749)
-# ==2126==    by 0x4096A2E: e_contact_new_from_vcard (e-contact.c:1230)
-# ==2126==    by 0x409187B: e_book_handle_response (e-book.c:3090)
-# ==2126==    by 0x427AF84: g_cclosure_marshal_VOID__POINTER (gmarshal.c:601)
-# ==2126==    by 0x426D2CA: g_closure_invoke (gclosure.c:490)
-# ==2126==    by 0x427F4D2: signal_emit_unlocked_R (gsignal.c:2440)
-# ==2126==    by 0x4280EF2: g_signal_emit_valist (gsignal.c:2199)
-# ==2126==    by 0x4281198: g_signal_emit (gsignal.c:2243)
-# ==2126==    by 0x4085A8A: impl_BookListener_respond_get_contact (e-book-listener.c:136)
-# ==2126==    by 0x4080C70: _ORBIT_skel_small_GNOME_Evolution_Addressbook_BookListener_notifyContactRequested (Evolution-DataServer-Addressbook-common.c:144)
-# ==2126==    by 0x4846436: ORBit_POAObject_invoke (poa.c:1142)
-# ==2126==    by 0x484C664: ORBit_OAObject_invoke (orbit-adaptor.c:338)
-# ==2126==    by 0x48395D8: ORBit_small_invoke_adaptor (orbit-small.c:844)
-# ==2126==    by 0x484A2B9: ORBit_POAObject_handle_request (poa.c:1351)
-{
-   e_contact_new_from_vcard VI
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_strdup
-   fun:e_vcard_attribute_new
-   fun:read_attribute
-   fun:parse
-   fun:e_vcard_construct
-   fun:e_contact_new_from_vcard
-}
-
-# ==2272== 23,539 bytes in 36 blocks are possibly lost in loss record 23 of 39
-# ==2272==    at 0x401D4B0: malloc (vg_replace_malloc.c:149)
-# ==2272==    by 0x42DCA95: g_malloc (gmem.c:131)
-# ==2272==    by 0x42F5618: g_strdup (gstrfuncs.c:92)
-# ==2272==    by 0x4097698: e_contact_get (e-contact.c:1542)
-# ==2272==    by 0x40978B2: e_contact_get_const (e-contact.c:1575)
-# ==2272==    by 0x80E844C: EvolutionContactSource::beginSyncThrow(bool, bool, bool) (EvolutionContactSource.cpp:254)
-# ==2272==    by 0x805BB1F: EvolutionSyncSource::beginSync() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2272==    by 0x80555C1: TestEvolutionSyncSource<EvolutionContactSource>::beginSync() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2272==    by 0x80A8E13: LocalTests::testManyChanges() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2272==    by 0x80E1FBC: CppUnit::TestCaller<LocalTests>::runTest() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2272==    by 0x4051C88: CppUnit::TestCaseMethodFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==2272==    by 0x40433ED: CppUnit::DefaultProtector::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==2272==    by 0x404D8D2: CppUnit::ProtectorChain::ProtectFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==2272==    by 0x404D613: CppUnit::ProtectorChain::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==2272==    by 0x405A390: CppUnit::TestResult::protect(CppUnit::Functor const&, CppUnit::Test*, std::string const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==2272==    by 0x4051637: CppUnit::TestCase::run(CppUnit::TestResult*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==2272==    by 0x40522FC: CppUnit::TestComposite::doRunChildTests(CppUnit::TestResult*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==2272==    by 0x4052229: CppUnit::TestComposite::run(CppUnit::TestResult*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==2272==    by 0x405A009: CppUnit::TestResult::runTest(CppUnit::Test*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==2272==    by 0x405C72F: CppUnit::TestRunner::run(CppUnit::TestResult&, std::string const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-{
-   e_contact_new_from_vcard VII
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_strdup
-   fun:e_contact_get
-   fun:e_contact_get_const
 }
 
 # ==32743== 9,840 (1,032 direct, 8,808 indirect) bytes in 86 blocks are definitely lost in loss record 27 of 41
@@ -1326,112 +1132,6 @@
    fun:cal_object_list_cb
 }
 
-# ==2787== 515 bytes in 19 blocks are possibly lost in loss record 18 of 62
-# ==2787==    at 0x401D4B0: malloc (vg_replace_malloc.c:149)
-# ==2787==    by 0x42DCA95: g_malloc (gmem.c:131)
-# ==2787==    by 0x42F1E32: g_slice_alloc (gslice.c:824)
-# ==2787==    by 0x42C7C98: g_hash_table_new_full (ghash.c:347)
-# ==2787==    by 0x42C7D23: g_hash_table_new (ghash.c:318)
-# ==2787==    by 0x40E43FA: e_cal_component_init (e-cal-component.c:255)
-# ==2787==    by 0x428F065: g_type_create_instance (gtype.c:1569)
-# ==2787==    by 0x4273B21: g_object_constructor (gobject.c:1046)
-# ==2787==    by 0x4274308: g_object_newv (gobject.c:937)
-# ==2787==    by 0x4274EE6: g_object_new_valist (gobject.c:986)
-# ==2787==    by 0x427509F: g_object_new (gobject.c:795)
-# ==2787==    by 0x40E4987: e_cal_component_new (e-cal-component.c:457)
-# ==2787==    by 0x40DEC3C: e_cal_get_object_list_as_comp (e-cal.c:3204)
-# ==2787==    by 0x80ECBFE: EvolutionCalendarSource::beginSyncThrow(bool, bool, bool) (EvolutionCalendarSource.cpp:238)
-# ==2787==    by 0x805BB1F: EvolutionSyncSource::beginSync() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2787==    by 0x8056E45: TestEvolutionSyncSource<EvolutionCalendarSource>::beginSync() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2787==    by 0x80D1BDD: LocalTests::insert(CreateSource, char const*) (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2787==    by 0x807067B: LocalTests::testSimpleInsert() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2787==    by 0x80B0043: LocalTests::testChanges() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2787==    by 0x80E1FBC: CppUnit::TestCaller<LocalTests>::runTest() (in /tmp/runtests/head/tmp/build/src/client-test)
-{
-   e_cal_get_object_list_as_comp
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_slice_alloc
-   fun:g_hash_table_new_full
-   fun:g_hash_table_new
-   fun:e_cal_component_init
-   fun:g_type_create_instance
-   fun:g_object_constructor
-   fun:g_object_newv
-   fun:g_object_new_valist
-   fun:g_object_new
-   fun:e_cal_component_new
-   fun:e_cal_get_object_list_as_comp
-}
-
-# ==2787== 2,416 bytes in 53 blocks are possibly lost in loss record 43 of 62
-# ==2787==    at 0x401C7EF: calloc (vg_replace_malloc.c:279)
-# ==2787==    by 0x42DC9FD: g_malloc0 (gmem.c:150)
-# ==2787==    by 0x40E43D6: e_cal_component_init (e-cal-component.c:252)
-# ==2787==    by 0x428F065: g_type_create_instance (gtype.c:1569)
-# ==2787==    by 0x4273B21: g_object_constructor (gobject.c:1046)
-# ==2787==    by 0x4274308: g_object_newv (gobject.c:937)
-# ==2787==    by 0x4274EE6: g_object_new_valist (gobject.c:986)
-# ==2787==    by 0x427509F: g_object_new (gobject.c:795)
-# ==2787==    by 0x40E4987: e_cal_component_new (e-cal-component.c:457)
-# ==2787==    by 0x40DEC3C: e_cal_get_object_list_as_comp (e-cal.c:3204)
-# ==2787==    by 0x80ECBFE: EvolutionCalendarSource::beginSyncThrow(bool, bool, bool) (EvolutionCalendarSource.cpp:238)
-# ==2787==    by 0x805BB1F: EvolutionSyncSource::beginSync() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2787==    by 0x8056E45: TestEvolutionSyncSource<EvolutionCalendarSource>::beginSync() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2787==    by 0x80D67B1: LocalTests::compareDatabases(char const*, SyncSource&, bool) (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2787==    by 0x80AFBE8: LocalTests::testImport() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2787==    by 0x80E1FBC: CppUnit::TestCaller<LocalTests>::runTest() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==2787==    by 0x4051C88: CppUnit::TestCaseMethodFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==2787==    by 0x40433ED: CppUnit::DefaultProtector::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==2787==    by 0x404D8D2: CppUnit::ProtectorChain::ProtectFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==2787==    by 0x404D613: CppUnit::ProtectorChain::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-{
-   e_cal_get_object_list_as_comp
-   Memcheck:Leak
-   fun:calloc
-   fun:g_malloc0
-   fun:e_cal_component_init
-   fun:g_type_create_instance
-   fun:g_object_constructor
-   fun:g_object_newv
-   fun:g_object_new_valist
-   fun:g_object_new
-   fun:e_cal_component_new
-   fun:e_cal_get_object_list_as_comp
-}
-
-# ==2787== 5,488 bytes in 2 blocks are possibly lost in loss record 44 of 62
-# ==2787==    at 0x401D4B0: malloc (vg_replace_malloc.c:149)
-# ==2787==    by 0x412193A: icalvalue_new_clone (icalvalue.c:147)
-# ==2787==    by 0x4114C06: icalproperty_new_clone (icalproperty.c:141)
-# ==2787==    by 0x410CAC3: icalcomponent_new_clone (icalcomponent.c:199)
-# ==2787==    by 0x40D81C8: cal_object_list_cb (e-cal.c:742)
-# ==2787==    by 0x40D72DF: e_cal_marshal_VOID__INT_POINTER (e-cal-marshal.c:156)
-# ==2787==    by 0x426D2CA: g_closure_invoke (gclosure.c:490)
-# ==2787==    by 0x427F4D2: signal_emit_unlocked_R (gsignal.c:2440)
-# ==2787==    by 0x4280EF2: g_signal_emit_valist (gsignal.c:2199)
-# ==2787==    by 0x4281198: g_signal_emit (gsignal.c:2243)
-# ==2787==    by 0x40F21C5: impl_notifyObjectListRequested (e-cal-listener.c:419)
-# ==2787==    by 0x40D1E8C: _ORBIT_skel_small_GNOME_Evolution_Calendar_CalListener_notifyObjectListRequested (Evolution-DataServer-Calendar-common.c:200)
-# ==2787==    by 0x4846436: ORBit_POAObject_invoke (poa.c:1142)
-# ==2787==    by 0x484C664: ORBit_OAObject_invoke (orbit-adaptor.c:338)
-# ==2787==    by 0x48395D8: ORBit_small_invoke_adaptor (orbit-small.c:844)
-# ==2787==    by 0x484A2B9: ORBit_POAObject_handle_request (poa.c:1351)
-# ==2787==    by 0x484A95B: ORBit_POAObject_invoke_incoming_request (poa.c:1421)
-# ==2787==    by 0x483213A: giop_thread_queue_process (giop.c:771)
-# ==2787==    by 0x48329D7: giop_request_handler_thread (giop.c:481)
-# ==2787==    by 0x42FE686: g_thread_pool_thread_proxy (gthreadpool.c:265)
-{
-   cal_object_list_cb
-   Memcheck:Leak
-   fun:malloc
-   fun:icalvalue_new_clone
-   fun:icalproperty_new_clone
-   fun:icalcomponent_new_clone
-   fun:cal_object_list_cb
-}
-
 # ==2787== 2,797,740 (154,999 direct, 2,642,741 indirect) bytes in 4,206 blocks are definitely lost in loss record 59 of 62
 # ==2787==    at 0x401D4B0: malloc (vg_replace_malloc.c:149)
 # ==2787==    by 0x42DCA95: g_malloc (gmem.c:131)
@@ -1557,37 +1257,6 @@
    fun:e_cal_backend_sync_get_changes
    fun:_e_cal_backend_get_changes
    fun:e_cal_backend_get_changes
-}
-
-# ==3482== 2,701,069 (155,015 direct, 2,546,054 indirect) bytes in 4,205 blocks are definitely lost in loss record 57 of 62
-# ==3482==    at 0x401D4B0: malloc (vg_replace_malloc.c:149)
-# ==3482==    by 0x42DCA95: g_malloc (gmem.c:131)
-# ==3482==    by 0x42F1E32: g_slice_alloc (gslice.c:824)
-# ==3482==    by 0x42D2945: g_list_prepend (glist.c:95)
-# ==3482==    by 0x40DEC67: e_cal_get_object_list_as_comp (e-cal.c:3206)
-# ==3482==    by 0x80ECBFE: EvolutionCalendarSource::beginSyncThrow(bool, bool, bool) (EvolutionCalendarSource.cpp:238)
-# ==3482==    by 0x805BB1F: EvolutionSyncSource::beginSync() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==3482==    by 0x8056E45: TestEvolutionSyncSource<EvolutionCalendarSource>::beginSync() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==3482==    by 0x80D67B1: LocalTests::compareDatabases(char const*, SyncSource&, bool) (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==3482==    by 0x80AFBE8: LocalTests::testImport() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==3482==    by 0x80699C1: LocalTests::testImportDelete() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==3482==    by 0x80E1FBC: CppUnit::TestCaller<LocalTests>::runTest() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==3482==    by 0x4051C88: CppUnit::TestCaseMethodFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==3482==    by 0x40433ED: CppUnit::DefaultProtector::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==3482==    by 0x404D8D2: CppUnit::ProtectorChain::ProtectFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==3482==    by 0x404D613: CppUnit::ProtectorChain::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==3482==    by 0x405A390: CppUnit::TestResult::protect(CppUnit::Functor const&, CppUnit::Test*, std::string const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==3482==    by 0x4051637: CppUnit::TestCase::run(CppUnit::TestResult*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==3482==    by 0x40522FC: CppUnit::TestComposite::doRunChildTests(CppUnit::TestResult*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==3482==    by 0x4052229: CppUnit::TestComposite::run(CppUnit::TestResult*) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-{
-   e_cal_get_object_list_as_comp
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_slice_alloc
-   fun:g_list_prepend
-   fun:e_cal_get_object_list_as_comp
 }
 
 # ==3659== 32 bytes in 1 blocks are possibly lost in loss record 3 of 63
@@ -1764,41 +1433,6 @@
    fun:bonobo_poa_get_threaded
    fun:e_cal_listener_new
    fun:e_cal_init
-}
-
-# ==3807== 443 bytes in 19 blocks are possibly lost in loss record 16 of 62
-# ==3807==    at 0x401D4B0: malloc (vg_replace_malloc.c:149)
-# ==3807==    by 0x42DCA95: g_malloc (gmem.c:131)
-# ==3807==    by 0x42F1E32: g_slice_alloc (gslice.c:824)
-# ==3807==    by 0x42F30AA: g_slist_append (gslist.c:69)
-# ==3807==    by 0x40E4FEC: scan_text (e-cal-component.c:653)
-# ==3807==    by 0x40E5121: scan_property (e-cal-component.c:705)
-# ==3807==    by 0x40E57B5: scan_icalcomponent (e-cal-component.c:952)
-# ==3807==    by 0x40E5C3A: e_cal_component_set_icalcomponent (e-cal-component.c:1114)
-# ==3807==    by 0x40DEC53: e_cal_get_object_list_as_comp (e-cal.c:3205)
-# ==3807==    by 0x80ECBFE: EvolutionCalendarSource::beginSyncThrow(bool, bool, bool) (EvolutionCalendarSource.cpp:238)
-# ==3807==    by 0x805BB1F: EvolutionSyncSource::beginSync() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==3807==    by 0x8056E45: TestEvolutionSyncSource<EvolutionCalendarSource>::beginSync() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==3807==    by 0x80C5CEB: LocalTests::deleteAll(CreateSource) (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==3807==    by 0x80AAA3C: LocalTests::testManyChanges() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==3807==    by 0x80E1FBC: CppUnit::TestCaller<LocalTests>::runTest() (in /tmp/runtests/head/tmp/build/src/client-test)
-# ==3807==    by 0x4051C88: CppUnit::TestCaseMethodFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==3807==    by 0x40433ED: CppUnit::DefaultProtector::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==3807==    by 0x404D8D2: CppUnit::ProtectorChain::ProtectFunctor::operator()() const (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==3807==    by 0x404D613: CppUnit::ProtectorChain::protect(CppUnit::Functor const&, CppUnit::ProtectorContext const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-# ==3807==    by 0x405A390: CppUnit::TestResult::protect(CppUnit::Functor const&, CppUnit::Test*, std::string const&) (in /usr/lib/libcppunit-1.12.so.0.0.0)
-{
-   e_cal_get_object_list_as_comp
-   Memcheck:Leak
-   fun:malloc
-   fun:g_malloc
-   fun:g_slice_alloc
-   fun:g_slist_append
-   fun:scan_text
-   fun:scan_property
-   fun:scan_icalcomponent
-   fun:e_cal_component_set_icalcomponent
-   fun:e_cal_get_object_list_as_comp
 }
 
 # ==3807== 571 bytes in 2 blocks are possibly lost in loss record 48 of 62

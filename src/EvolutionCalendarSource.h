@@ -21,7 +21,7 @@
 #define INCL_EVOLUTIONCALENDARSOURCE
 
 #include <config.h>
-#include "EvolutionSyncSource.h"
+#include "TrackingSyncSource.h"
 #include "EvolutionSmartPtr.h"
 
 #ifdef ENABLE_ECAL
@@ -30,9 +30,13 @@
 
 /**
  * Implements access to Evolution calendars, either
- * using the to-do item or events.
+ * using the to-do item or events. Change tracking
+ * is done by looking at the modification time stamp.
+ * Recurring events and their detached recurrences are
+ * handled as one item for the main event and one item
+ * for each detached recurrence.
  */
-class EvolutionCalendarSource : public EvolutionSyncSource
+class EvolutionCalendarSource : public TrackingSyncSource
 {
   public:
     /**
@@ -58,7 +62,7 @@ class EvolutionCalendarSource : public EvolutionSyncSource
     virtual const char *getMimeVersion() const { return "2.0"; }
     virtual const char *getSupportedTypes() const { return "text/calendar:2.0"; }
    
-    virtual SyncItem *createItem(const string &uid);
+    virtual SyncItem *createItem(const string &luid);
 
     //
     // implementation of SyncSource
@@ -67,18 +71,15 @@ class EvolutionCalendarSource : public EvolutionSyncSource
 
   protected:
     //
-    // implementation of EvolutionSyncSource callbacks
+    // implementation of TrackingSyncSource callbacks
     //
-    virtual void beginSyncThrow(bool needAll,
-                                bool needPartial,
-                                bool deleteLocal);
-    virtual void endSyncThrow();
+    virtual void listAllItems(RevisionMap_t &revisions);
+    virtual string insertItem(string &luid, const SyncItem &item, bool &merged);
     virtual void setItemStatusThrow(const char *key, int status);
-    virtual int addItemThrow(SyncItem& item);
-    virtual int updateItemThrow(SyncItem& item);
-    virtual int deleteItemThrow(SyncItem& item);
-    virtual void logItem(const string &uid, const string &info, bool debug = false);
-    virtual void logItem(SyncItem &item, const string &info, bool debug = false);
+    virtual void deleteItem(const string &luid);
+    virtual void flush();
+    virtual void logItem(const string &luid, const string &info, bool debug = false);
+    virtual void logItem(const SyncItem &item, const string &info, bool debug = false);
 
   protected:
     /** valid after open(): the calendar that this source references */
@@ -90,21 +91,41 @@ class EvolutionCalendarSource : public EvolutionSyncSource
     
 
     /**
-     * retrieve the item with the given uid - may throw exception
+     * An item is identified in the calendar by
+     * its UID (unique ID) and RID (recurrence ID).
+     * The RID may be empty.
+     *
+     * This is turned into a SyncML LUID by
+     * concatenating them: <uid>-rid<rid>.
+     */
+    class ItemID {
+    public:
+    ItemID(const string &uid, const string &rid) :
+        m_uid(uid),
+            m_rid(rid)
+            {}
+    ItemID(const char *uid, const char *rid):
+        m_uid(uid ? uid : ""),
+            m_rid(rid ? rid : "")
+                {}
+
+        const string m_uid, m_rid;
+
+        string getLUID() const;
+        static string getLUID(const string &uid, const string &rid);
+        static ItemID parseLUID(const string &luid);
+    };
+
+    /**
+     * retrieve the item with the given id - may throw exception
      *
      * caller has to free result
      */
-    icalcomponent *retrieveItem(const string &uid);
+    icalcomponent *retrieveItem(const ItemID &id);
 
-    /** retrieve the item with the given uid as VCALENDAR string - may throw exception */
-    string retrieveItemAsString(const string &uid);
+    /** retrieve the item with the given luid as VCALENDAR string - may throw exception */
+    string retrieveItemAsString(const ItemID &id);
 
-    /**
-     * - parse the data stored in the given SyncItem, throw error if cannot be parsed
-     * - then either insert or update it, trying update if insert fails because it exists already
-     * - also import timezones
-     */
-    virtual int insertItem(SyncItem &item, bool update);
 
     /** returns the type which the ical library uses for our components */
     icalcomponent_kind getCompType() {
@@ -112,9 +133,6 @@ class EvolutionCalendarSource : public EvolutionSyncSource
             m_type == E_CAL_SOURCE_TYPE_JOURNAL ? ICAL_VJOURNAL_COMPONENT :
             ICAL_VTODO_COMPONENT;
     }
-
-    /** returns the uid of the given component */
-    string getCompUID(icalcomponent *icomp);
 
     /** ECalAuthFunc which calls the authenticate() methods */
     static char *eCalAuthFunc(ECal *ecal,
@@ -128,8 +146,33 @@ class EvolutionCalendarSource : public EvolutionSyncSource
     char *authenticate(const char *prompt,
                        const char *key);
 
-    /** help function which resets the lists of added/updated/deleted items and fills them again */
-    void getChanges();
+    /**
+     * Returns the LUID of a calendar item.
+     */
+    string getLUID(ECalComponent *ecomp);
+
+    /**
+     * Extract item ID from calendar item.  An icalcomponent must
+     * refer to the VEVENT/VTODO/VJOURNAL component.
+     */
+    ItemID getItemID(ECalComponent *ecomp);
+    ItemID getItemID(icalcomponent *icomp);
+
+    /**
+     * Extract modification string from calendar item.
+     */
+    string getItemModTime(ECalComponent *ecomp);
+
+    /**
+     * Extract modification string of an item stored in
+     * the calendar.
+     */
+    string getItemModTime(const ItemID &id);
+
+    /**
+     * Convert to string in canonical representation.
+     */
+    string icalTime2Str(const struct icaltimetype &tt);
 };
 
 #else

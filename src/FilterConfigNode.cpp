@@ -17,53 +17,67 @@
  */
 
 #include "FilterConfigNode.h"
+#include "EvolutionSyncClient.h"
 
 FilterConfigNode::FilterConfigNode(const boost::shared_ptr<ConfigNode> &node,
-                                   const ConfigFilter_t &filter) :
+                                   const ConfigFilter &filter) :
+    m_filter(filter),
     m_node(node),
-    m_filter(filter)
+    m_readOnlyNode(node)
+{
+}
+
+FilterConfigNode::FilterConfigNode(const boost::shared_ptr<const ConfigNode> &node,
+                                   const ConfigFilter &filter) :
+    m_filter(filter),
+    m_readOnlyNode(node)
 {
 }
 
 void FilterConfigNode::addFilter(const string &property,
                                  const string &value)
 {
-    m_filter.insert(pair<string, string>(property, value));
+    m_filter.set(property, value);
 }
 
-void FilterConfigNode::setFilters(const ConfigFilter_t &filter)
+void FilterConfigNode::setFilter(const ConfigFilter &filter)
 {
     m_filter = filter;
 }
 
 string FilterConfigNode::readProperty(const string &property) const
 {
-    ConfigFilter_t::const_iterator it = m_filter.find(property);
+    ConfigFilter::const_iterator it = m_filter.find(property);
 
     if (it != m_filter.end()) {
         return it->second;
     } else {
-        return m_node->readProperty(property);
+        return m_readOnlyNode->readProperty(property);
     }
 }
 
 void FilterConfigNode::setProperty(const string &property,
                                    const string &value,
-                                   const string &comment)
+                                   const string &comment,
+                                   const string *defValue)
 {
-    ConfigFilter_t::iterator it = m_filter.find(property);
+    ConfigFilter::iterator it = m_filter.find(property);
+
+    if (!m_node.get()) {
+        EvolutionSyncClient::throwError(getName() + ": read-only, setting properties not allowed");
+    }
 
     if (it != m_filter.end()) {
         m_filter.erase(it);
     }
-    m_node->setProperty(property, value, comment);
+    m_node->setProperty(property, value, comment, defValue);
 }
 
-map<string, string> FilterConfigNode::readProperties()
+map<string, string> FilterConfigNode::readProperties() const
 {
-    map<string, string> res = m_node->readProperties();
+    map<string, string> res = m_readOnlyNode->readProperties();
 
-    for(ConfigFilter_t::iterator it = m_filter.begin();
+    for(ConfigFilter::const_iterator it = m_filter.begin();
         it != m_filter.end();
         it++) {
         res.insert(*it);
@@ -74,10 +88,22 @@ map<string, string> FilterConfigNode::readProperties()
 
 void FilterConfigNode::removeProperty(const string &property)
 {
-    ConfigFilter_t::iterator it = m_filter.find(property);
+    ConfigFilter::iterator it = m_filter.find(property);
+
+    if (!m_node.get()) {
+        EvolutionSyncClient::throwError(getName() + ": read-only, removing properties not allowed");
+    }
 
     if (it != m_filter.end()) {
         m_filter.erase(it);
     }
     m_node->removeProperty(property);
+}
+
+void FilterConfigNode::flush()
+{
+    if (!m_node.get()) {
+        EvolutionSyncClient::throwError(getName() + ": read-only, flushing allowed");
+    }
+    m_node->flush();
 }

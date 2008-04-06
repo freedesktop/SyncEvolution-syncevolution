@@ -37,6 +37,17 @@ directory. This mode is required to generate source distributions
 because those are meant to contain a copy of the client library
 code.
 
+For doing development work the recommended configure line is:
+   configure --with-sync4j-src=<dir> \
+             SYNCEVOLUTION_CXXFLAGS="-Wall -Werror -Wno-unknown-pragmas" \
+             --enable-unit-tests
+
+In contrast to CXXFLAGS, SYNCEVOLUTION_CXXFLAGS adds these flags only
+to the compilation of source files from the SyncEvolution source code
+repository, but not the client library. -Wno-unknown-pragmas is
+required to avoid warnings triggered by '#pragma }', a trick to
+preserve indention after 'extern "C" {' in
+/usr/include/evolution-data-server-1.12/libical/
 
 Working with the Code
 ---------------------

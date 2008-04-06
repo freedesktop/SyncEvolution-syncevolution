@@ -33,12 +33,17 @@ using namespace std;
  * by implementing the pure virtual functions below:
  * - open() the data
  * - enumerate all existing items
- * - provide UID and "revision string"; both have to be simple
- *   strings (printable ASCII, no white spaces, no equal sign);
- *   the UID must remain *constant* when the user edits an item (it
+ * - provide UID and "revision string": 
+ *   The UID must remain *constant* when the user edits an item (it
  *   may change when SyncEvolution changes an item), whereas the
  *   revision string must *change* each time the item is changed
- *   by anyone
+ *   by anyone.
+ *   Both can be arbitrary strings, but keeping them simple (printable
+ *   ASCII, no white spaces, no equal sign) makes debugging simpler
+ *   because they can be stored as they are as key/value pairs in the
+ *   sync source's change tracking config node (the .other.ini files when
+ *   using file-based configuration). More complex strings use escape
+ *   sequences introduced with an exclamation mark for unsafe characters.
  * - import/export/update single items
  * - persistently store all changes in flush()
  * - clean up in close()
@@ -93,19 +98,26 @@ class TrackingSyncSource : public EvolutionSyncSource
     /**
      * Create or modify an item.
      *
-     * The sync source should be flexible: if the UID is non-empty,
-     * it should try to modify the item. If the item is not found,
-     * a new one should be created. The UID may be changed both when
-     * creating as well as when modifying an item.
+     * The sync source should be flexible: if the UID is non-empty, it
+     * shall modify the item referenced by the UID. If the UID is
+     * empty, but the item already exists (e.g., a calendar event
+     * which was imported by the user manually), then the existing
+     * item should also be updated.
      *
-     * Errors are signalled by throwing an exception.
+     * Passing a UID of an item which does not exist is an error.
+     * This error should be reported instead of covering it up by
+     * (re)creating the item.
+     *
+     * Errors are signalled by throwing an exception. 
      *
      * @param uid      in: identifies the item to be modified, empty for creating;
      *                 out: UID after the operation
      * @param item     contains the new content of the item and its MIME type
+     * @retval merged  set this to true if an existing item was updated instead of adding it;
+     *                 guaranteed to be initialized to false before the call
      * @return the new revision string
      */
-    virtual string insertItem(string &uid, const SyncItem &item) = 0;
+    virtual string insertItem(string &uid, const SyncItem &item, bool &merged) = 0;
 
     /**
      * Extract information for the item identified by UID
@@ -164,7 +176,9 @@ class TrackingSyncSource : public EvolutionSyncSource
  protected:
     /** log a one-line info about an item */
     virtual void logItem(const string &uid, const string &info, bool debug = false) = 0;
-    virtual void logItem(SyncItem &item, const string &info, bool debug = false) = 0;
+    virtual void logItem(const SyncItem &item, const string &info, bool debug = false) = 0;
+
+    virtual void setItemStatusThrow(const char *key, int status);
 
   private:
     /* implementations of EvolutionSyncSource callbacks */
@@ -172,7 +186,6 @@ class TrackingSyncSource : public EvolutionSyncSource
                                 bool needPartial,
                                 bool deleteLocal);
     virtual void endSyncThrow();
-    virtual void setItemStatusThrow(const char *key, int status);
     virtual int addItemThrow(SyncItem& item);
     virtual int updateItemThrow(SyncItem& item);
     virtual int deleteItemThrow(SyncItem& item);

@@ -42,13 +42,6 @@ class EvolutionContactSource : public EvolutionSyncSource
     EvolutionContactSource(const EvolutionContactSource &other);
     virtual ~EvolutionContactSource() { close(); }
 
-    //
-    // utility function for testing:
-    // returns a pointer to an Evolution contact (memory owned
-    // by Evolution) with the given UID, NULL if not found or failure
-    //
-    EContact *getContact( const string &uid );
-
     // utility function: extract vcard from item in format suitable for Evolution
     string preparseVCard(SyncItem& item);
 
@@ -84,7 +77,7 @@ class EvolutionContactSource : public EvolutionSyncSource
     virtual int updateItemThrow(SyncItem& item);
     virtual int deleteItemThrow(SyncItem& item);
     virtual void logItem(const string &uid, const string &info, bool debug = false);
-    virtual void logItem(SyncItem &item, const string &info, bool debug = false);
+    virtual void logItem(const SyncItem &item, const string &info, bool debug = false);
 
   private:
     /** valid after open(): the address book that this source references */

@@ -64,7 +64,7 @@ sqlite3_stmt *SQLiteUtil::prepareSQL(const char *sqlfmt, ...)
 
 SQLiteUtil::key_t SQLiteUtil::findKey(const char *database, const char *keyname, const char *key)
 {
-    eptr<sqlite3_stmt> query(prepareSQL("SELECT ROWID FROM %s WHERE %s = '%s';", database, keyname, key));
+    sqliteptr query(prepareSQL("SELECT ROWID FROM %s WHERE %s = '%s';", database, keyname, key));
 
     int res = checkSQL(sqlite3_step(query), "getting key");
     if (res == SQLITE_ROW) {
@@ -76,7 +76,7 @@ SQLiteUtil::key_t SQLiteUtil::findKey(const char *database, const char *keyname,
 
 string SQLiteUtil::findColumn(const char *database, const char *keyname, const char *key, const char *column, const char *def)
 {
-    eptr<sqlite3_stmt> query(prepareSQL("SELECT %s FROM %s WHERE %s = '%s';", column, database, keyname, key));
+    sqliteptr query(prepareSQL("SELECT %s FROM %s WHERE %s = '%s';", column, database, keyname, key));
 
     int res = checkSQL(sqlite3_step(query), "getting key");
     if (res == SQLITE_ROW) {
@@ -103,7 +103,7 @@ SQLiteUtil::syncml_time_t SQLiteUtil::getTimeColumn(sqlite3_stmt *stmt, int col)
 string SQLiteUtil::time2str(SQLiteUtil::syncml_time_t t)
 {
     char buffer[128];
-    sprintf(buffer, "%lld", t);
+    sprintf(buffer, "%lu", t);
     return buffer;
 }
 
@@ -162,7 +162,7 @@ sqlite3_stmt *SQLiteUtil::vObjectToRow(vocl::VObject &vobj,
     }
 
     // create statement
-    eptr<sqlite3_stmt> insert(prepareSQL("INSERT INTO ABPerson( %s ) "
+    sqliteptr insert(prepareSQL("INSERT INTO ABPerson( %s ) "
                                          "VALUES( %s );",
                                          cols_stream.str().c_str(),
                                          values_stream.str().c_str()));
@@ -208,7 +208,7 @@ void SQLiteUtil::open(const string &name,
     checkSQL(res, "opening");
 
     // check whether file is empty = newly created, define schema if that's the case
-    eptr<sqlite3_stmt> check(prepareSQLWrapper("SELECT * FROM sqlite_master;"));
+    sqliteptr check(prepareSQLWrapper("SELECT * FROM sqlite_master;"));
     switch (sqlite3_step(check)) {
     case SQLITE_ROW:
         // okay
@@ -218,7 +218,7 @@ void SQLiteUtil::open(const string &name,
         const char *nextsql = schema;
         while (nextsql && *nextsql) {
             const char *sql = nextsql;
-            eptr<sqlite3_stmt> create(prepareSQLWrapper(sql, &nextsql));
+            sqliteptr create(prepareSQLWrapper(sql, &nextsql));
             while (true) {
                 int res = sqlite3_step(create);
                 if (res == SQLITE_DONE) {
@@ -241,7 +241,7 @@ void SQLiteUtil::open(const string &name,
     int i;
     for (i = 0; mapping[i].colname; i++) ;
     m_mapping.set(new Mapping[i + 1]);
-    eptr<sqlite3_stmt> query;
+    sqliteptr query;
     string tablename;
     for (i = 0; mapping[i].colname; i++) {
         m_mapping[i] = mapping[i];

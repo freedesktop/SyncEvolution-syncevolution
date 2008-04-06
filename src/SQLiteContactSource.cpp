@@ -33,6 +33,8 @@
 
 using namespace vocl;
 
+#include <boost/algorithm/string/case_conv.hpp>
+
 enum {
     PERSON_LAST,
     PERSON_MIDDLE,
@@ -163,9 +165,18 @@ void SQLiteContactSource::close()
     m_sqlite.close();
 }
 
+SQLiteContactSource::sources SQLiteContactSource::getSyncBackends()
+{
+    sources res;
+
+    res.push_back(EvolutionSyncSource::source("select database via file path",
+                                              "file:///<absolute path>"));
+    return res;
+}
+
 void SQLiteContactSource::listAllItems(RevisionMap_t &revisions)
 {
-    eptr<sqlite3_stmt> all(m_sqlite.prepareSQL("SELECT ROWID, CreationDate, ModificationDate FROM ABPerson;"));
+    sqliteptr all(m_sqlite.prepareSQL("SELECT ROWID, CreationDate, ModificationDate FROM ABPerson;"));
     while (m_sqlite.checkSQL(sqlite3_step(all)) == SQLITE_ROW) {
         string uid = m_sqlite.toString(SQLITE3_COLUMN_KEY(all, 0));
         string modTime = m_sqlite.time2str(m_sqlite.getTimeColumn(all, 2));
@@ -177,14 +188,13 @@ SyncItem *SQLiteContactSource::createItem(const string &uid)
 {
     logItem(uid, "extracting from database", true);
 
-    eptr<sqlite3_stmt> contact(m_sqlite.prepareSQL("SELECT * FROM ABPerson WHERE ROWID = '%s';", uid.c_str()));
+    sqliteptr contact(m_sqlite.prepareSQL("SELECT * FROM ABPerson WHERE ROWID = '%s';", uid.c_str()));
     if (m_sqlite.checkSQL(sqlite3_step(contact)) != SQLITE_ROW) {
         throw runtime_error(string(getName()) + ": contact not found: " + uid);
     }
 
     VObject vobj;
     string tmp;
-    const unsigned char *text;
 
     vobj.addProperty("BEGIN", "VCARD");
     vobj.addProperty("VERSION", "2.1");
@@ -219,7 +229,7 @@ SyncItem *SQLiteContactSource::createItem(const string &uid)
     arrayptr<char> finalstr(vobj.toString(), "VOCL string");
     LOG.debug("%s", (char *)finalstr);
 
-    auto_ptr<SyncItem> item( new SyncItem( uid.c_str() ) );
+    cxxptr<SyncItem> item( new SyncItem( uid.c_str() ) );
     item->setData( (char *)finalstr, strlen(finalstr) );
     item->setDataType( getMimeType() );
     item->setModificationTime( 0 );
@@ -227,7 +237,7 @@ SyncItem *SQLiteContactSource::createItem(const string &uid)
     return item.release();
 }
 
-string SQLiteContactSource::insertItem(string &uid, const SyncItem &item)
+string SQLiteContactSource::insertItem(string &uid, const SyncItem &item, bool &merged)
 {
     string creationTime;
     std::auto_ptr<VObject> vobj(VConverter::parse((char *)((SyncItem &)item).getData()));
@@ -300,9 +310,9 @@ string SQLiteContactSource::insertItem(string &uid, const SyncItem &item)
 
     // synthesize sort keys: upper case with specific order of first/last name
     firstsort = first + " " + last;
-    transform(firstsort.begin(), firstsort.end(), firstsort.begin(), ::toupper);
+    boost::to_upper(firstsort);
     lastsort = last + " " + first;
-    transform(lastsort.begin(), lastsort.end(), lastsort.begin(), ::toupper);
+    boost::to_upper(lastsort);
 
     // optional fixed UID, potentially fixed creation time
     if (uid.size()) {
@@ -317,14 +327,14 @@ string SQLiteContactSource::insertItem(string &uid, const SyncItem &item)
 
     // delete complete row so that we can recreate it
     if (uid.size()) {
-        eptr<sqlite3_stmt> remove(m_sqlite.prepareSQL("DELETE FROM ABPerson WHERE ROWID == ?;"));
+        sqliteptr remove(m_sqlite.prepareSQL("DELETE FROM ABPerson WHERE ROWID == ?;"));
         m_sqlite.checkSQL(sqlite3_bind_text(remove, 1, uid.c_str(), -1, SQLITE_TRANSIENT));
         m_sqlite.checkSQL(sqlite3_step(remove));
     }
 
     string cols_str = cols.str();
     string values_str = values.str();
-    eptr<sqlite3_stmt> insert(m_sqlite.vObjectToRow(*vobj,
+    sqliteptr insert(m_sqlite.vObjectToRow(*vobj,
                                                     "ABPerson",
                                                     numparams,
                                                     cols.str(),
@@ -363,7 +373,7 @@ string SQLiteContactSource::insertItem(string &uid, const SyncItem &item)
 
 void SQLiteContactSource::deleteItem(const string &uid)
 {
-    eptr<sqlite3_stmt> del;
+    sqliteptr del;
 
     del.set(m_sqlite.prepareSQL("DELETE FROM ABPerson WHERE "
                                 "ABPerson.ROWID = ?;"));
@@ -395,10 +405,10 @@ void SQLiteContactSource::logItem(const string &uid, const string &info, bool de
     }
 }
 
-void SQLiteContactSource::logItem(SyncItem &item, const string &info, bool debug)
+void SQLiteContactSource::logItem(const SyncItem &item, const string &info, bool debug)
 {
     if (LOG.getLevel() >= (debug ? LOG_LEVEL_DEBUG : LOG_LEVEL_INFO)) {
-        string data(getData(item));
+        string data = (const char *)item.getData();
 
         // avoid pulling in a full vcard parser by just searching for a specific property,
         // FN in this case

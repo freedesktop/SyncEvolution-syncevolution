@@ -17,6 +17,7 @@
  */
 
 #include "AddressBookSource.h"
+#include "SyncEvolutionUtil.h"
 
 static EvolutionSyncSource *createSource(const EvolutionSyncSourceParams &params)
 {
@@ -51,3 +52,27 @@ static RegisterSyncSource registerMe("iPhone/Mac OS X Address Book",
                                      "   vCard 3.0 = text/vcard\n",
                                      Values() +
                                      (Aliases("apple-contacts") + "Mac OS X Address Book" + "iPhone Address Book"));
+
+#ifdef ENABLE_ADDRESSBOOK
+#ifdef ENABLE_UNIT_TESTS
+
+class EvolutionAddressbookTest : public CppUnit::TestFixture {
+    CPPUNIT_TEST_SUITE(EvolutionAddressbookTest);
+    CPPUNIT_TEST(testInstantiate);
+    CPPUNIT_TEST_SUITE_END();
+
+protected:
+    void testInstantiate() {
+        boost::shared_ptr<EvolutionSyncSource> source;
+        source.reset(EvolutionSyncSource::createTestingSource("contacts", "contacts", true));
+        source.reset(EvolutionSyncSource::createTestingSource("contacts", "addressbook", true));
+        source.reset(EvolutionSyncSource::createTestingSource("contacts", "apple-contacts", true));
+        source.reset(EvolutionSyncSource::createTestingSource("contacts", "Mac OS X Address Book:text/vcard", true));
+        source.reset(EvolutionSyncSource::createTestingSource("contacts", "iPhone Address Book:text/x-vcard", true));
+    }
+};
+
+SYNCEVOLUTION_TEST_SUITE_REGISTRATION(EvolutionAddressbookTest);
+
+#endif // ENABLE_UNIT_TESTS
+#endif // ENABLE_ADDRESSBOOK

@@ -22,9 +22,13 @@
 
 #include <ConfigNode.h>
 #include <boost/shared_ptr.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
+
+#include "SyncEvolutionUtil.h"
 
 #include <map>
 #include <utility>
+#include <vector>
 #include <string>
 using namespace std;
 
@@ -39,31 +43,70 @@ using namespace std;
  */
 class FilterConfigNode : public ConfigNode {
  public:
-    typedef map<string, string> ConfigFilter_t;
+    class ConfigFilter : public map<string, string> {
+    public:
+        /** add the mapping, regardless whether it exists already or not */
+        void set(const string &property, const string &value) {
+            pair<iterator, bool> inserted = insert(make_pair(boost::to_lower_copy(property), value));
+            if (!inserted.second) {
+                inserted.first->second = value;
+            }
+        }
 
+        operator string () const {
+            vector<string> res;
+
+            for (const_iterator it = begin();
+                 it != end();
+                 ++it) {
+                res.push_back(it->first + " = " + it->second);
+            }
+            sort(res.begin(), res.end());
+            return join("\n", res.begin(), res.end());
+        }
+
+        iterator find(const string &property) {
+            return map<string, string>::find(boost::to_lower_copy(property));
+        }
+
+        const_iterator find(const string &property) const {
+            return map<string, string>::find(boost::to_lower_copy(property));
+        }
+    };
+
+    /** read-write access to underlying node */
     FilterConfigNode(const boost::shared_ptr<ConfigNode> &node,
-                     const ConfigFilter_t &filter = ConfigFilter_t() );
+                     const ConfigFilter &filter = ConfigFilter());
+
+    /** read-only access to underlying node */
+    FilterConfigNode(const boost::shared_ptr<const ConfigNode> &node,
+                     const ConfigFilter &filter = ConfigFilter());
+
+    virtual string getName() const { return m_readOnlyNode->getName(); }
 
     /** add another entry to the list of filter properties */
     void addFilter(const string &property,
                    const string &value);
 
     /** replace current filter list with new one */
-    void setFilters(const ConfigFilter_t &filter);
+    void setFilter(const ConfigFilter &filter);
+    const ConfigFilter &getFilter() const { return m_filter; }
 
     /* ConfigNode API */
-    virtual void flush() { m_node->flush(); }
+    virtual void flush();
     virtual string readProperty(const string &property) const;
     virtual void setProperty(const string &property,
                              const string &value,
-                             const string &comment = "");
-    virtual map<string, string> readProperties();
+                             const string &comment = "",
+                             const string *defValue = NULL);
+    virtual map<string, string> readProperties() const;
     virtual void removeProperty(const string &property);
-    virtual bool exists() { m_node->exists(); }
+    virtual bool exists() const { return m_readOnlyNode->exists(); }
 
  private:
-    ConfigFilter_t m_filter;
+    ConfigFilter m_filter;
     boost::shared_ptr<ConfigNode> m_node;
+    boost::shared_ptr<const ConfigNode> m_readOnlyNode;
 };
 
 #endif

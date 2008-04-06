@@ -49,7 +49,11 @@ class ConfigNode;
  *   can get lost
  * - nodes and the whole tree can be explicitly flushed
  * - it distinguishes between user visible configuration options and
- *   hidden read/write properties
+ *   hidden read/write properties attached to the same path
+ * - in addition to these visible or hidden properties under well-known
+ *   names there can be nodes attached to each path which can
+ *   be used for arbitrary key/value pairs; different "other" nodes can
+ *   be selected via an additional string
  * - temporarily override values without saving them (see FilterConfigNode
  *   decorator)
  * - improved access to properties inside nodes (iterating, deleting)
@@ -62,19 +66,34 @@ class ConfigTree {
     /** ensure that all changes are saved persistently */
     virtual void flush() = 0;
 
+    /** a string identifying the root of the configuration - exact meaning varies */
+    virtual string getRootPath() const = 0;
+
+    /**
+     * Selects which node attached to a path name is to be used.
+     * This is similar in concept to multiple data forks in a file.
+     */
+    enum PropertyType {
+        visible,   /**< visible configuration properties */
+        hidden,    /**< hidden read/write properties */
+        other      /**< additional node selected via otherID */
+    };
+
     /**
      * Open the specified node. Opening it multiple
      * times will return the same instance, so the content
      * is always synchronized.
      *
      * @param path      a relative path with / as separator
-     * @param hidden    access the part of the node which is not
-     *                  supposed to be edited by the user
-     * @param changeId  if set, then create a hidden change tracking node
+     * @param type      selects which fork of that path is to be opened
+     *                  (visible, hidden, change tracking)
+     * @param otherId   an additional string to be attached to the other
+     *                  node's name (allows having multiple different such
+     *                  nodes); an empty string is allowed
      */
     virtual boost::shared_ptr<ConfigNode> open(const string &path,
-                                               bool hidden,
-                                               const string &changeId = string("")) = 0;
+                                               PropertyType type,
+                                               const string &otherId = string("")) = 0;
 
     /**
      * returns names of all existing nodes beneath the given path

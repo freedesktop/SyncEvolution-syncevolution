@@ -18,14 +18,13 @@
 
 #include "FileConfigNode.h"
 #include "EvolutionSyncClient.h"
+#include "SyncEvolutionUtil.h"
 
 #include <boost/scoped_array.hpp>
 
 #include <unistd.h>
-#include <sys/stat.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <dirent.h>
 
 /** @TODO: replace stdio.h with streams */
 
@@ -36,33 +35,6 @@ FileConfigNode::FileConfigNode(const string &path, const string &fileName) :
     m_exists(false)
 {
     read();
-}
-
-/** ensure that m_path is writable, otherwise throw error */
-static void mkdir_p(const string &path)
-{
-    boost::scoped_array<char> dirs(new char[path.size() + 1]);
-    char *curr = dirs.get();
-    strcpy(curr, path.c_str());
-    do {
-        char *nextdir = strchr(curr, '/');
-        if (nextdir) {
-            *nextdir = 0;
-            nextdir++;
-        }
-        if (*curr) {
-            if (access(dirs.get(),
-                       nextdir ? (R_OK|X_OK) : (R_OK|X_OK|W_OK)) &&
-                (errno != ENOENT ||
-                 mkdir(dirs.get(), 0777))) {
-                EvolutionSyncClient::throwError(string(dirs.get()) + ": " + strerror(errno));
-            }
-        }
-        if (nextdir) {
-            nextdir[-1] = '/';
-        }
-        curr = nextdir;
-    } while (curr);
 }
 
 void FileConfigNode::read()
@@ -83,9 +55,8 @@ void FileConfigNode::read()
         }
         m_exists = true;
         fclose(file);
-    } else {
-        m_modified = true;
     }
+    m_modified = false;
 }
 
 void FileConfigNode::flush()
@@ -128,7 +99,9 @@ void FileConfigNode::flush()
  */
 static bool getContent(const string &line,
                        string &property,
-                       string &value)
+                       string &value,
+                       bool &isComment,
+                       bool fuzzyComments)
 {
     size_t start = 0;
     while (start < line.size() &&
@@ -136,10 +109,27 @@ static bool getContent(const string &line,
         start++;
     }
 
-    // empty line or comment?
-    if (start == line.size() ||
-        line[start] == '#') {
+    // empty line?
+    if (start == line.size()) {
         return false;
+    }
+
+    // Comment? Potentially keep reading, might be commented out assignment.
+    isComment = false;
+    if (line[start] == '#') {
+        if (!fuzzyComments) {
+            return false;
+        }
+        isComment = true;
+    }
+
+    // recognize # <word> = <value> as commented out (= default) value
+    if (isComment) {
+        start++;
+        while (start < line.size() &&
+               isspace(line[start])) {
+            start++;
+        }
     }
 
     // extract property
@@ -150,7 +140,6 @@ static bool getContent(const string &line,
     }
     property = line.substr(start, end - start);
 
-
     // skip assignment 
     start = end;
     while (start < line.size() &&
@@ -159,6 +148,7 @@ static bool getContent(const string &line,
     }
     if (start == line.size() ||
         line[start] != '=') {
+        // invalid syntax or we tried to read a comment as assignment
         return false;
     }
 
@@ -189,11 +179,13 @@ static bool getContent(const string &line,
  */
 static bool getValue(const string &line,
                      const string &property,
-                     string &value)
+                     string &value,
+                     bool &isComment,
+                     bool fuzzyComments)
 
 {
     string curProp;
-    return getContent(line, curProp, value) &&
+    return getContent(line, curProp, value, isComment, fuzzyComments) &&
         !strcasecmp(curProp.c_str(), property.c_str());
 }
 
@@ -204,7 +196,9 @@ string FileConfigNode::readProperty(const string &property) const {
          it != m_lines.end();
          it++) {
         const string &line = *it;
-        if (getValue(line, property, value)) {
+        bool isComment;
+
+        if (getValue(line, property, value, isComment, false)) {
             return value;
         }
     }
@@ -213,7 +207,7 @@ string FileConfigNode::readProperty(const string &property) const {
 
 
 
-map<string, string> FileConfigNode::readProperties() {
+map<string, string> FileConfigNode::readProperties() const {
     map<string, string> res;
     string value, property;
 
@@ -221,7 +215,11 @@ map<string, string> FileConfigNode::readProperties() {
          it != m_lines.end();
          it++) {
         const string &line = *it;
-        if (getContent(line, property, value)) {
+        bool isComment;
+        if (getContent(line, property, value, isComment, false)) {
+            // don't care about the result: only the first instance
+            // of the property counts, so it doesn't matter when
+            // inserting it again later fails
             res.insert(pair<string, string>(property, value));
         }
     }
@@ -235,8 +233,8 @@ void FileConfigNode::removeProperty(const string &property)
     list<string>::iterator it = m_lines.begin();
     while (it != m_lines.end()) {
         const string &line = *it;
-
-        if (getValue(line, property, value)) {
+        bool isComment;
+        if (getValue(line, property, value, isComment, false)) {
             it = m_lines.erase(it);
             m_modified = true;
         } else {
@@ -245,17 +243,30 @@ void FileConfigNode::removeProperty(const string &property)
     }
 }
 
-void FileConfigNode::setProperty(const string &property, const string &newvalue, const string &comment) {
-    string newstr = property + " = " + newvalue;
+void FileConfigNode::setProperty(const string &property,
+                                 const string &newvalue,
+                                 const string &comment,
+                                 const string *defValue) {
+    string newstr;
     string oldvalue;
+    bool isDefault = false;
+
+    if (defValue &&
+        *defValue == newvalue) {
+        newstr += "# ";
+        isDefault = true;
+    }
+    newstr += property + " = " + newvalue;
 
     for (list<string>::iterator it = m_lines.begin();
          it != m_lines.end();
          it++) {
         const string &line = *it;
+        bool isComment;
 
-        if (getValue(line, property, oldvalue)) {
-            if (newvalue != oldvalue) {
+        if (getValue(line, property, oldvalue, isComment, true)) {
+            if (newvalue != oldvalue ||
+                isComment && !isDefault) {
                 *it = newstr;
                 m_modified = true;
             }
@@ -265,19 +276,15 @@ void FileConfigNode::setProperty(const string &property, const string &newvalue,
 
     // add each line of the comment as separate line in .ini file
     if (comment.size()) {
+        list<string> commentLines;
+        ConfigProperty::splitComment(comment, commentLines);
         if (m_lines.size()) {
             m_lines.push_back("");
         }
-        size_t start = 0;
-        while (true) {
-            size_t end = comment.find('\n', start);
-            if (end == comment.npos) {
-                m_lines.push_back(string("# ") + comment.substr(start));
-                break;
-            } else {
-                m_lines.push_back(string("# ") + comment.substr(start, end - start));
-                start = end + 1;
-            }
+        for (list<string>::const_iterator it = commentLines.begin();
+             it != commentLines.end();
+             ++it) {
+            m_lines.push_back(string("# " + *it));
         }
     }
 

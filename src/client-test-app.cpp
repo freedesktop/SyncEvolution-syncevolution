@@ -37,123 +37,54 @@
 #endif
 
 #include "EvolutionSyncClient.h"
-#include "EvolutionCalendarSource.h"
-#include "EvolutionMemoSource.h"
-#include "EvolutionContactSource.h"
-#include "SQLiteContactSource.h"
-#include "AddressBookSource.h"
-
-/**
- * A helper class for Mac OS X which switches between different
- * address books by renaming the database file. This is a hack
- * because it makes assumptions about the data storage - and it
- * does not work, apparently because the library caches information
- * in memory...
- *
- * The initial address book is called "system" and it will be
- * restored during normal termination - but don't count on that...
- */
-class MacOSAddressBook {
-public:
-    /**
-     * moves the current address book out of the way and
-     * makes the one with the selected suffix the default one
-     */
-    void select(const string &suffix) {
-        if (suffix != m_currentBook) {
-            const char *home = getenv("HOME");
-            int res;
-            CPPUNIT_ASSERT(home);
-
-            int wdfd = open(".", O_RDONLY);
-            CPPUNIT_ASSERT(wdfd >= 0);
-            res = chdir(home);
-            CPPUNIT_ASSERT(res >= 0);
-            res = chdir("Library/Application Support/AddressBook/");
-            CPPUNIT_ASSERT(res >= 0);
-
-            string baseName = "AddressBook.data";
-
-            string oldBook = baseName + "." + m_currentBook;
-            res = rename(baseName.c_str(), oldBook.c_str());
-            printf("renamed %s to %s: %s\n",
-                   baseName.c_str(),
-                   oldBook.c_str(),
-                   res >= 0 ? "successfully" : strerror(errno));
-            CPPUNIT_ASSERT(res >= 0 || errno == ENOENT);
-
-            string newBook = baseName + "." + suffix;
-            res = rename(newBook.c_str(), baseName.c_str());
-            printf("renamed %s to %s: %s\n",
-                   newBook.c_str(),
-                   baseName.c_str(),
-                   res >= 0 ? "successfully" : strerror(errno));
-            CPPUNIT_ASSERT(res >= 0 || errno == ENOENT);
-
-            // touch it
-            res = open(baseName.c_str(), O_WRONLY|O_CREAT, 0600);
-            if (res >= 0) {
-                close(res);
-            }
-
-            unlink("ABPerson.skIndexInverted");
-            unlink("AddressBook.data.previous");
-
-            // chdir(home);
-            // chdir("Library/Caches/com.apple.AddressBook");
-            // system("rm -rf MetaData");
-
-            m_currentBook = suffix;
-
-            res = fchdir(wdfd);
-            CPPUNIT_ASSERT(res >= 0);
-        }
-    }
-
-    static MacOSAddressBook &get() { return m_singleton; }
-
-private:
-    MacOSAddressBook() :
-        m_currentBook("system") {}
-    ~MacOSAddressBook() {
-        select("system");
-    }
-
-    string m_currentBook;
-    static MacOSAddressBook m_singleton;
-};
-MacOSAddressBook MacOSAddressBook::m_singleton;
-
+#include "EvolutionSyncSource.h"
 
 /**
  * a wrapper class which automatically does an open() in the constructor and a close() in the destructor
  * and ensures that the sync mode is "none" = testing mode
  */
-template<class T> class TestEvolutionSyncSource : public T {
+class TestEvolutionSyncSource : public SyncSource {
 public:
-    TestEvolutionSyncSource(ECalSourceType type, const EvolutionSyncSourceParams &params) :
-        T(type, params)
+    TestEvolutionSyncSource(const string &type, const EvolutionSyncSourceParams &params) :
+        SyncSource(params.m_name.c_str(), NULL)
     {
-        T::setSyncMode(SYNC_NONE);
-    }
-    TestEvolutionSyncSource(const EvolutionSyncSourceParams &params) :
-        T(params)
-    {
-        T::setSyncMode(SYNC_NONE);
+        PersistentEvolutionSyncSourceConfig config(params.m_name, params.m_nodes);
+        config.setSourceType(type);
+        m_source.reset(EvolutionSyncSource::createSource(params));
+        m_source->setSyncMode(SYNC_NONE);
     }
 
     virtual int beginSync() {
-        CPPUNIT_ASSERT_NO_THROW(T::open());
-        CPPUNIT_ASSERT(!T::hasFailed());
-        return T::beginSync();
+        CPPUNIT_ASSERT_NO_THROW(m_source->open());
+        CPPUNIT_ASSERT(!m_source->hasFailed());
+        return m_source->beginSync();
     }
 
     virtual int endSync() {
-        int res = T::endSync();
-        CPPUNIT_ASSERT_NO_THROW(T::close());
-        CPPUNIT_ASSERT(!T::hasFailed());
+        int res = m_source->endSync();
+        CPPUNIT_ASSERT_NO_THROW(m_source->close());
+        CPPUNIT_ASSERT(!m_source->hasFailed());
         return res;
     }
+
+    virtual SyncItem* getFirstItem() { return m_source->getFirstItem(); }
+    virtual SyncItem* getNextItem() { return m_source->getNextItem(); }
+    virtual SyncItem* getFirstNewItem() { return m_source->getFirstNewItem(); }
+    virtual SyncItem* getNextNewItem() { return m_source->getNextNewItem(); }
+    virtual SyncItem* getFirstUpdatedItem() { return m_source->getFirstUpdatedItem(); }
+    virtual SyncItem* getNextUpdatedItem() { return m_source->getNextUpdatedItem(); }
+    virtual SyncItem* getFirstDeletedItem() { return m_source->getFirstDeletedItem(); }
+    virtual SyncItem* getNextDeletedItem() { return m_source->getNextDeletedItem(); }
+    virtual SyncItem* getFirstItemKey() { return m_source->getFirstItemKey(); }
+    virtual SyncItem* getNextItemKey() { return m_source->getNextItemKey(); }
+    virtual void setItemStatus(const char *key, int status) { m_source->setItemStatus(key, status); }
+    virtual int addItem(SyncItem& item) { return m_source->addItem(item); }
+    virtual int updateItem(SyncItem& item) { return m_source->updateItem(item); }
+    virtual int deleteItem(SyncItem& item) { return m_source->deleteItem(item); }
+    const char *getName() { return m_source->getName(); }
+    virtual ArrayElement* clone() { return NULL; }
+
+    auto_ptr<EvolutionSyncSource> m_source;
 };
 
 class EvolutionLocalTests : public LocalTests {
@@ -273,7 +204,7 @@ public:
         EvolutionSyncConfig config(string(server) + "_" + id);
         if (!config.exists()) {
             // no configuration yet
-            config.setDefaults(server);
+            config.setDefaults();
             config.setDevID(id == "1" ? "sc-api-nat" : "sc-pim-ppc");
         }
         for (SourceType sourceType = (SourceType)0; sourceType < TEST_MAX_SOURCE; sourceType = (SourceType)((int)sourceType + 1) ) {
@@ -429,9 +360,6 @@ public:
         set<string> activeSources;
         for(int i = 0; sources[i] >= 0; i++) {
             activeSources.insert(getSourceName(enabledSources[sources[i]]));
-            if (enabledSources[sources[i]] == TEST_ADDRESS_BOOK_SOURCE) {
-                MacOSAddressBook::get().select(clientID);
-            }
         }
 
         string server = getenv("CLIENT_TEST_SERVER") ? getenv("CLIENT_TEST_SERVER") : "funambol";
@@ -527,6 +455,7 @@ private:
             break;
          default:
             CPPUNIT_ASSERT(type >= 0 && type < TEST_MAX_SOURCE);
+            return "";
             break;
         }
     }
@@ -559,35 +488,22 @@ private:
         switch (type) {
          case TEST_CONTACT21_SOURCE:
          case TEST_CONTACT30_SOURCE:
-#ifdef ENABLE_EBOOK
-            ss = new TestEvolutionSyncSource<EvolutionContactSource>(params);
-#endif
+            ss = new TestEvolutionSyncSource("evolution-contacts:text/vcard", params);
             break;
          case TEST_CALENDAR_SOURCE:
-#ifdef ENABLE_ECAL
-            ss = new TestEvolutionSyncSource<EvolutionCalendarSource>(E_CAL_SOURCE_TYPE_EVENT, params);
-#endif
+            ss = new TestEvolutionSyncSource("evolution-calendar", params);
             break;
          case TEST_TASK_SOURCE:
-#ifdef ENABLE_ECAL         
-            ss = new TestEvolutionSyncSource<EvolutionCalendarSource>(E_CAL_SOURCE_TYPE_TODO, params);
-#endif
+            ss = new TestEvolutionSyncSource("evolution-tasks", params);
             break;
          case TEST_MEMO_SOURCE:
-#ifdef ENABLE_ECAL         
-            ss = new TestEvolutionSyncSource<EvolutionMemoSource>(params);
-#endif
+            ss = new TestEvolutionSyncSource("evolution-memos", params);
             break;
          case TEST_SQLITE_CONTACT_SOURCE:
-#ifdef ENABLE_SQLITE
-             ss = new TestEvolutionSyncSource<SQLiteContactSource>(params);
-#endif
+            ss = new TestEvolutionSyncSource("SQLite Address Book", params);
             break;
          case TEST_ADDRESS_BOOK_SOURCE:
-#ifdef ENABLE_ADDRESSBOOK
-            MacOSAddressBook::get().select(((TestEvolution &)client).clientID);
-            ss = new TestEvolutionSyncSource<AddressBookSource>(params);
-#endif
+            ss = new TestEvolutionSyncSource("apple-contacts", params);
             break;
          default:
             CPPUNIT_ASSERT(type >= 0 && type < TEST_MAX_SOURCE);
@@ -603,9 +519,8 @@ private:
     static int dumpMemoSource(ClientTest &client, SyncSource &source, const char *file) {
         std::ofstream out(file);
 
-#ifdef ENABLE_ECAL
-        ((EvolutionMemoSource &)source).exportData(out);
-#endif
+        ((TestEvolutionSyncSource &)source).m_source->exportData(out);
+
         out.close();
         return out.bad();
     }

@@ -270,7 +270,6 @@ bool VProperty::isType(wchar_t* type) {
     if(containsParameter(type))
         return true;
 
-    char *value;
     for (int paramindex = 0;
          paramindex < parameterCount();
          paramindex++) {

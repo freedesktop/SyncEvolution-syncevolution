@@ -37,15 +37,32 @@ static const string
 EVOLUTION_CALENDAR_PRODID("PRODID:-//ACME//NONSGML SyncEvolution//EN"),
 EVOLUTION_CALENDAR_VERSION("VERSION:2.0");
 
+class unrefECalChanges {
+ public:
+    /** free list of ECalChange instances */
+    static void unref(GList *pointer) {
+        if (pointer) {
+            GList *next = pointer;
+            do {
+                ECalChange *ecc = (ECalChange *)next->data;
+                g_object_unref(ecc->comp);
+                g_free(next->data);
+                next = next->next;
+            } while (next);
+            g_list_free(pointer);
+        }
+    }
+};
+
 EvolutionCalendarSource::EvolutionCalendarSource(ECalSourceType type,
                                                  const EvolutionSyncSourceParams &params) :
-    EvolutionSyncSource(params),
+    TrackingSyncSource(params),
     m_type(type)
 {
 }
 
 EvolutionCalendarSource::EvolutionCalendarSource( const EvolutionCalendarSource &other ) :
-    EvolutionSyncSource(other),
+    TrackingSyncSource(other),
     m_type(other.m_type)
 {
     switch (m_type) {
@@ -80,13 +97,15 @@ EvolutionSyncSource::sources EvolutionCalendarSource::getSyncBackends()
     }
 
     EvolutionSyncSource::sources result;
-
+    bool first = true;
     for (GSList *g = e_source_list_peek_groups (sources); g; g = g->next) {
         ESourceGroup *group = E_SOURCE_GROUP (g->data);
         for (GSList *s = e_source_group_peek_sources (group); s; s = s->next) {
             ESource *source = E_SOURCE (s->data);
             result.push_back( EvolutionSyncSource::source( e_source_peek_name(source),
-                                                           e_source_get_uri(source) ) );
+                                                           e_source_get_uri(source),
+                                                           first ) );
+            first = false;
         }
     }
     return result;
@@ -95,7 +114,7 @@ EvolutionSyncSource::sources EvolutionCalendarSource::getSyncBackends()
 char *EvolutionCalendarSource::authenticate(const char *prompt,
                                             const char *key)
 {
-    const char *passwd = m_syncSourceConfig ? m_syncSourceConfig->getPassword() : NULL;
+    const char *passwd = getPassword();
 
     LOG.debug("%s: authentication requested, prompt \"%s\", key \"%s\" => %s",
               getName(), prompt, key,
@@ -147,120 +166,31 @@ void EvolutionCalendarSource::open()
                            (void *)"Evolution Data Server has died unexpectedly, database no longer available.");
 }
 
-void EvolutionCalendarSource::getChanges()
+void EvolutionCalendarSource::listAllItems(RevisionMap_t &revisions)
 {
     GError *gerror = NULL;
-    bool foundChanges;
-
-    m_newItems.clear();
-    m_updatedItems.clear();
-    m_deletedItems.clear();
-
-    // This is repeated in a loop because it was observed that in
-    // Evolution 2.0.6 the deleted items were not all reported in one
-    // chunk. Instead each invocation of e_cal_get_changes() reported
-    // additional changes.
-    do {
-        GList *nextItem;
-
-        foundChanges = false;
-        if (!e_cal_get_changes(m_calendar, (char *)m_changeId.c_str(), &nextItem, &gerror)) {
-            throwError( "reading changes", gerror );
-        }
-        while (nextItem) {
-            ECalChange *ecc = (ECalChange *)nextItem->data;
-
-            if (ecc->comp) {
-                const char *uid = NULL;
-
-                // does not have a return code which could be checked
-                e_cal_component_get_uid(ecc->comp, &uid);
-
-                if (uid) {
-                    switch (ecc->type) {
-                    case E_CAL_CHANGE_ADDED:
-                        if (m_newItems.addItem(uid)) {
-                            foundChanges = true;
-                        }
-                        break;
-                    case E_CAL_CHANGE_MODIFIED:
-                        if (m_updatedItems.addItem(uid)) {
-                            foundChanges = true;
-                        }
-                        break;
-                    case E_CAL_CHANGE_DELETED:
-                        if (m_deletedItems.addItem(uid)) {
-                            foundChanges = true;
-                        }
-                        break;
-                    }
-                }
-            }
-
-            nextItem = nextItem->next;
-        }
-    } while(foundChanges);
-}
-
-void EvolutionCalendarSource::beginSyncThrow(bool needAll,
-                                             bool needPartial,
-                                             bool deleteLocal)
-{
-    GError *gerror = NULL;
-
-    if (deleteLocal) {
-        GList *nextItem;
+    GList *nextItem;
         
-        if (!e_cal_get_object_list_as_comp(m_calendar,
-                                           "(contains? \"any\" \"\")",
-                                           &nextItem,
-                                           &gerror)) {
-            throwError( "reading all items", gerror );
-        }
-        while (nextItem) {
-            const char *uid;
-
-            e_cal_component_get_uid(E_CAL_COMPONENT(nextItem->data), &uid);
-            if (!e_cal_remove_object(m_calendar, uid, &gerror) ) {
-                throwError( string( "deleting calendar entry " ) + uid,
-                            gerror );
-            }
-            nextItem = nextItem->next;
-        }
+    if (!e_cal_get_object_list_as_comp(m_calendar,
+                                       "(contains? \"any\" \"\")",
+                                       &nextItem,
+                                       &gerror)) {
+        throwError( "reading all items", gerror );
     }
+    eptr<GList> listptr(nextItem);
+    while (nextItem) {
+        ECalComponent *ecomp = E_CAL_COMPONENT(nextItem->data);
+        ItemID id = getItemID(ecomp);
+        string luid = id.getLUID();
+        string modTime = getItemModTime(ecomp);
 
-    if (needAll) {
-        GList *nextItem;
-        
-        if (!e_cal_get_object_list_as_comp(m_calendar, "(contains? \"any\" \"\")", &nextItem, &gerror)) {
-            throwError( "reading all items", gerror );
-        }
-        while (nextItem) {
-            const char *uid;
-
-            e_cal_component_get_uid(E_CAL_COMPONENT(nextItem->data), &uid);
-            m_allItems.addItem(uid);
-            nextItem = nextItem->next;
-        }
+        revisions.insert(make_pair(luid, modTime));
+        nextItem = nextItem->next;
     }
-
-    if (needPartial) {
-        getChanges();
-    }
-}
-
-void EvolutionCalendarSource::endSyncThrow()
-{
-    if (m_isModified) {
-        getChanges();
-    }
-    resetItems();
-    m_isModified = false;
 }
 
 void EvolutionCalendarSource::close()
 {
-    endSyncThrow();
     m_calendar = NULL;
 }
 
@@ -275,22 +205,23 @@ void EvolutionCalendarSource::exportData(ostream &out)
                                        &gerror)) {
         throwError( "reading all items", gerror );
     }
+    eptr<GList> listptr(nextItem);
     while (nextItem) {
-        const char *uid;
-        e_cal_component_get_uid(E_CAL_COMPONENT(nextItem->data), &uid);
-        out << retrieveItemAsString(uid);
+        ItemID id = getItemID(E_CAL_COMPONENT(nextItem->data));
+        out << retrieveItemAsString(id);
         out << "\r\n";
         nextItem = nextItem->next;
     }
 }
 
-SyncItem *EvolutionCalendarSource::createItem(const string &uid)
+SyncItem *EvolutionCalendarSource::createItem(const string &luid)
 {
-    logItem( uid, "extracting from EV", true );
-        
-    string icalstr = retrieveItemAsString(uid);
+    logItem( luid, "extracting from EV", true );
 
-    auto_ptr<SyncItem> item(new SyncItem(uid.c_str()));
+    ItemID id = ItemID::parseLUID(luid);
+    string icalstr = retrieveItemAsString(id);
+
+    auto_ptr<SyncItem> item(new SyncItem(luid.c_str()));
     item->setData(icalstr.c_str(), icalstr.size());
     item->setDataType("text/calendar");
     item->setModificationTime(0);
@@ -301,35 +232,19 @@ SyncItem *EvolutionCalendarSource::createItem(const string &uid)
 void EvolutionCalendarSource::setItemStatusThrow(const char *key, int status)
 {
     switch (status) {
-     case STC_CONFLICT_RESOLVED_WITH_SERVER_DATA: {
+    case STC_CONFLICT_RESOLVED_WITH_SERVER_DATA:
          LOG.error("%s: calendar item %.80s: conflict, will be replaced by server\n",
                    getName(), key);
-
-        // uids make the item unique, so it cannot be copied;
-        // the following code does not work:
-        //
-        // ECalComponent *comp = retrieveItem(key);
-        // ECalComponent *copy = e_cal_component_clone(comp);
-        // if (!copy) {
-        //    LOG.error("copying %s: making copy failed\n", key);
-        // }
-        break;
-     }
-     default:
-        EvolutionSyncSource::setItemStatusThrow(key, status);
         break;
     }
+    TrackingSyncSource::setItemStatusThrow(key, status);
 }
 
-int EvolutionCalendarSource::addItemThrow(SyncItem& item)
+string EvolutionCalendarSource::insertItem(string &luid, const SyncItem &item, bool &merged)
 {
-    return insertItem(item, false);
-}
-
-int EvolutionCalendarSource::insertItem(SyncItem& item, bool update)
-{
-    bool fallback = false;
-    string data = getData(item);
+    bool update = !luid.empty();
+    string data = (const char *)item.getData();
+    string modTime;
 
     /*
      * Evolution/libical can only deal with \, as separator.
@@ -369,8 +284,6 @@ int EvolutionCalendarSource::insertItem(SyncItem& item, bool update)
     }
 
     GError *gerror = NULL;
-    char *uid = NULL;
-    int status = STC_OK;
 
     // insert before adding/updating the event so that the new VTIMEZONE is
     // immediately available should anyone want it
@@ -398,119 +311,129 @@ int EvolutionCalendarSource::insertItem(SyncItem& item, bool update)
     }
     
     if (!update) {
-        const char *olduid = icalcomponent_get_uid(subcomp);
-        string olduidstr(olduid ? olduid : "");
+        ItemID id = getItemID(subcomp);
+        const char *uid = NULL;
 
-        if(!e_cal_create_object(m_calendar, subcomp, &uid, &gerror)) {
+        // TODO: create detached recurrences
+
+        if(!e_cal_create_object(m_calendar, subcomp, (char **)&uid, &gerror)) {
             if (gerror->domain == E_CALENDAR_ERROR &&
                 gerror->code == E_CALENDAR_STATUS_OBJECT_ID_ALREADY_EXISTS) {
                 // Deal with error due to adding already existing item, that can happen,
                 // for example with a "dumb" server which cannot pair items by UID.
                 logItem(item, "exists already, updating instead");
-                fallback = true;
+                merged = true;
                 g_clear_error(&gerror);
 
                 // Starting with Evolution 2.12, the old UID was removed during
                 // e_cal_create_object(). Restore it so that the updating below works.
-                icalcomponent_set_uid(subcomp, olduidstr.c_str());
+                icalcomponent_set_uid(subcomp, id.m_uid.c_str());
             } else {
                 throwError( "storing new calendar item", gerror );
             }
         } else {
-            if (uid) {
-                item.setKey(uid);
-            }
+            ItemID id(uid, "");
+            luid = id.getLUID();
+            modTime = getItemModTime(id);
         }
     }
 
-    if (update || fallback) {
+    if (update || merged) {
+        // TODO: update detached recurrence
+
         // ensure that the component has the right UID - some servers replace it
         // inside the VEVENT, but luckily the SyncML standard requires them to
         // provide the original UID in an update
         if (update && item.getKey() && item.getKey()[0]) {
-            icalcomponent_set_uid(subcomp, item.getKey());
+            ItemID id = ItemID::parseLUID(item.getKey());
+            icalcomponent_set_uid(subcomp, id.m_uid.c_str());
         }
         
         if (!e_cal_modify_object(m_calendar, subcomp, CALOBJ_MOD_ALL, &gerror)) {
             throwError(string("updating calendar item ") + item.getKey(), gerror);
         }
-        string uid = getCompUID(subcomp);
-        if (uid.size()) {
-            item.setKey(uid.c_str());
-        }
-        if (fallback ) {
-            status = STC_CONFLICT_RESOLVED_WITH_MERGE;
-        }
+        ItemID id = getItemID(subcomp);
+        luid = id.getLUID();
+        modTime = getItemModTime(id);
     }
 
-    return status;
+    return modTime;
 }
 
-int EvolutionCalendarSource::updateItemThrow(SyncItem& item)
+void EvolutionCalendarSource::deleteItem(const string &luid)
 {
-    return insertItem(item, true);
-}
-
-int EvolutionCalendarSource::deleteItemThrow(SyncItem& item)
-{
-    int status = STC_OK;
     GError *gerror = NULL;
+    ItemID id = ItemID::parseLUID(luid);
 
-    if (!e_cal_remove_object(m_calendar, item.getKey(), &gerror)) {
+    // TODO: support detached recurrences
+
+    if (!e_cal_remove_object(m_calendar, id.m_uid.c_str(), &gerror)) {
         if (gerror->domain == E_CALENDAR_ERROR &&
             gerror->code == E_CALENDAR_STATUS_OBJECT_NOT_FOUND) {
             LOG.debug("%s: %s: request to delete non-existant item ignored",
-                      getName(), item.getKey());
+                      getName(), luid.c_str());
             g_clear_error(&gerror);
         } else {
-            throwError( string( "deleting calendar item " ) + item.getKey(),
+            throwError( string( "deleting calendar item " ) + luid,
                         gerror );
         }
     }
-    return status;
 }
 
-void EvolutionCalendarSource::logItem(const string &uid, const string &info, bool debug)
+void EvolutionCalendarSource::flush()
+{
+    // Flushing is not necessary, all changes are directly stored.
+    // However, our change tracking depends on the resolution with which
+    // Evolution stores modification times. Sleeping for a second here
+    // ensures that any future operations on the same date generate
+    // different modification time stamps.
+    time_t start = time(NULL);
+    do {
+        sleep(1);
+    } while (time(NULL) - start <= 0);
+}
+
+void EvolutionCalendarSource::logItem(const string &luid, const string &info, bool debug)
 {
     if (LOG.getLevel() >= (debug ? LOG_LEVEL_DEBUG : LOG_LEVEL_INFO)) {
-        (LOG.*(debug ? &Log::debug : &Log::info))("%s: %s: %s", getName(), uid.c_str(), info.c_str());
+        (LOG.*(debug ? &Log::debug : &Log::info))("%s: %s: %s", getName(), luid.c_str(), info.c_str());
     }
 }
 
-void EvolutionCalendarSource::logItem( SyncItem &item, const string &info, bool debug)
+void EvolutionCalendarSource::logItem(const SyncItem &item, const string &info, bool debug)
 {
     if (LOG.getLevel() >= (debug ? LOG_LEVEL_DEBUG : LOG_LEVEL_INFO)) {
         (LOG.*(debug ? &Log::debug : &Log::info))("%s: %s: %s", getName(), item.getKey(), info.c_str());
     }
 }
 
-icalcomponent *EvolutionCalendarSource::retrieveItem(const string &uid)
+icalcomponent *EvolutionCalendarSource::retrieveItem(const ItemID &id)
 {
     GError *gerror = NULL;
     icalcomponent *comp;
 
     if (!e_cal_get_object(m_calendar,
-                          uid.c_str(),
-                          NULL,
+                          id.m_uid.c_str(),
+                          !id.m_rid.empty() ? id.m_rid.c_str() : NULL,
                           &comp,
                           &gerror)) {
-        throwError(string("retrieving item: ") + uid, gerror);
+        throwError(string("retrieving item: ") + id.getLUID(), gerror);
     }
     if (!comp) {
-        throwError(string("retrieving item: ") + uid);
+        throwError(string("retrieving item: ") + id.getLUID());
     }
 
     return comp;
 }
 
-string EvolutionCalendarSource::retrieveItemAsString(const string &uid)
+string EvolutionCalendarSource::retrieveItemAsString(const ItemID &id)
 {
-    eptr<icalcomponent> comp(retrieveItem(uid));
+    eptr<icalcomponent> comp(retrieveItem(id));
     eptr<char> icalstr;
 
     icalstr = e_cal_get_component_as_string(m_calendar, comp);
     if (!icalstr) {
-        throwError(string("could not encode item as iCal: ") + uid);
+        throwError(string("could not encode item as iCal: ") + id.getLUID());
     }
 
     /*
@@ -547,17 +470,81 @@ string EvolutionCalendarSource::retrieveItemAsString(const string &uid)
     return data;
 }
 
-string EvolutionCalendarSource::getCompUID(icalcomponent *icomp)
+string EvolutionCalendarSource::ItemID::getLUID() const
 {
-    // figure out what the UID is
-    icalproperty *iprop = icalcomponent_get_first_property(icomp,
-                                                           ICAL_UID_PROPERTY);
-    if (!iprop) {
-        throwError("cannot extract UID property");
-    }
-    const char *uid = icalproperty_get_uid(iprop);
-    return string(uid ? uid : "");
+    return getLUID(m_uid, m_rid);
 }
+
+string EvolutionCalendarSource::ItemID::getLUID(const string &uid, const string &rid)
+{
+    return uid + "-rid" + rid;
+}
+
+EvolutionCalendarSource::ItemID EvolutionCalendarSource::ItemID::parseLUID(const string &luid)
+{
+    size_t ridoff = luid.rfind("-rid");
+    if (ridoff != luid.npos) {
+        return ItemID(luid.substr(0, ridoff),
+                      luid.substr(ridoff + strlen("-rid")));
+    } else {
+        return ItemID(luid, "");
+    }
+}
+
+EvolutionCalendarSource::ItemID EvolutionCalendarSource::getItemID(ECalComponent *ecomp)
+{
+    icalcomponent *icomp = e_cal_component_get_icalcomponent(ecomp);
+    if (!icomp) {
+        throwError("internal error in getItemID(): ECalComponent without icalcomp");
+    }
+    return getItemID(icomp);
+}
+
+EvolutionCalendarSource::ItemID EvolutionCalendarSource::getItemID(icalcomponent *icomp)
+{
+    const char *uid;
+    struct icaltimetype rid;
+
+    uid = icalcomponent_get_uid(icomp);
+    rid = icalcomponent_get_recurrenceid(icomp);
+    return ItemID(uid ? uid : "",
+                  icalTime2Str(rid));
+}
+
+string EvolutionCalendarSource::getItemModTime(ECalComponent *ecomp)
+{
+    struct icaltimetype *modTime;
+    e_cal_component_get_last_modified(ecomp, &modTime);
+    eptr<struct icaltimetype, struct icaltimetype, EvolutionUnrefFree<struct icaltimetype> > modTimePtr(modTime, "calendar item without modification time");
+    return icalTime2Str(*modTimePtr);
+}
+
+string EvolutionCalendarSource::getItemModTime(const ItemID &id)
+{
+    eptr<icalcomponent> icomp(retrieveItem(id));
+    icalproperty *lastModified = icalcomponent_get_first_property(icomp, ICAL_LASTMODIFIED_PROPERTY);
+    if (!lastModified) {
+        throwError("getItemModTime(): calendar item without modification time");
+    }
+    struct icaltimetype modTime = icalproperty_get_lastmodified(lastModified);
+    return icalTime2Str(modTime);
+
+}
+
+string EvolutionCalendarSource::icalTime2Str(const icaltimetype &tt)
+{
+    static const struct icaltimetype null = { 0 };
+    if (!memcmp(&tt, &null, sizeof(null))) {
+        return "";
+    } else {
+        const char *timestr = icaltime_as_ical_string(tt);
+        if (!timestr) {
+            throwError("cannot convert to time string");
+        }
+        return timestr;
+    }
+}
+
 #endif /* ENABLE_ECAL */
 
 #ifdef ENABLE_MODULES

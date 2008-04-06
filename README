@@ -153,12 +153,87 @@ associated with this is that the server might not recognize items that
 it already has stored previously which then would lead to duplication
 of items.
 
-The <options> in front of the server name are:
+Here is a full description of all <options> that can be put in front
+of the server name. Whenever an option accepts multiple values, a
+question mark can be used to get the corresponding help text and/or
+a list of valid values.
 
 --sync|-s <mode>
+--sync|-s ?
   Temporarily synchronize the active sources in that mode. Useful
   for a "refresh-from-server" or "refresh-from-client" sync which
   clears all data at one end and copies all items from the other.
+
+--print-servers
+  Prints the names of all configured servers to stdout.
+
+--print-config|-p
+  Prints the complete configuration for the selected server
+  to stdout, including up-to-date comments for all properties. The
+  format is the normal .ini format with source configurations in
+  different sections introduced with [<source>] lines. Can be combined
+  with --sync-property and --source-property to modify the configuration
+  on-the-fly. When one or more sources are listed after the <server>
+  name on the command line, then only the configs of those sources are
+  printed. Using --quiet suppresses the comments for each property.
+  When setting a --template, then the reference configuration for
+  that server is printed instead of an existing configuration.
+
+-–configure|-c
+  Modify the configuration files for the selected server. If no such
+  configuration exists, then a new one is created using one of the
+  template configurations (see --template option). When creating
+  a new configuration only the active sources will be set to active
+  in the new configuration, i.e. "syncevolution -c scheduleworld addressbook"
+  followed by "syncevolution scheduleworld" will only synchronize the
+  address book. The other sources are created in a disabled state.
+  When modifying an existing configuration and sources are specified,
+  then the source properties of only those sources are modified.
+
+--migrate
+  In SyncEvolution <= 0.7 a different layout of configuration files
+  was used. Using --migrate will automatically migrate to the new
+  layout and rename the old directory $HOME/.sync4j/evolution/<server> 
+  into $HOME/.sync4j/evolution/<server>.old to prevent accidental use
+  of the old configuration. WARNING: old SyncEvolution releases cannot
+  use the new configuration!
+  The switch can also be used to migrate a configuration in the current
+  configuration directory: this preserves all property values, discards
+  obsolete properties and sets all comments exactly as if the configuration
+  had been created from scratch. WARNING: custom comments in the
+  configuration are not preserved.
+  --migrate implies --configure and can be combined with modifying
+  properties.
+
+--sync-property|-y <property>=<value>
+--sync-property|-y ?
+--sync-property|-y <property>=?
+  Overrides a configuration property in the <server>/config.ini file
+  for the current synchronization run or permanently when --configure
+  is used to update the configuration. Can be used multiple times.
+  Specifying an unused property will trigger an error message.
+
+--source-property|-z <property>=<value>
+--source-property|-z ?
+--source-property|-z <property>=?
+  Same as --sync-option, but applies to the configuration of all active
+  sources. "--sync <mode>" is a shortcut for "--source-option sync=<mode>".
+
+--properties|-r <file name>|- [NOT IMPLEMENTED]
+  Same as --sync-property and --source-property, but with properties
+  specified in a file with the same format that --print-config uses.
+  "-" reads from stdin.
+
+--template|-l <server name>|default|?
+  Can be used to select from one of the built-in default configurations
+  for known SyncML servers. Defaults to the <server> name, so --template
+  only has to be specified when creating multiple different configurations
+  for the same server. "default" is an alias for "scheduleworld" and can be
+  used as the starting point for servers which do not have a built-in
+  configuration.
+  Each template contains a pseudo-random device ID. Therefore setting the
+  "deviceId" sync property is only necessary when manually recreating a
+  configuration or when a more descriptive name is desired.
 
 --status|-t
   The changes made to local data since the last synchronization are
@@ -175,11 +250,53 @@ The <options> in front of the server name are:
 --version
   Prints the SyncEvolution version.
 
+Use Cases
+---------
+
+Migrate a configuration from the  <= 0.7 format to the current one
+and/or updates the configuration so that it looks like configurations
+created anew with the current syncevolution:
+  $ syncevolution --migrate scheduleworld
+
+Deactivate all sources:
+  $ syncevolution --configure \
+                  --source-property sync=none \
+                  scheduleworld
+
+Activate address book synchronization again, using the --sync shortcut:
+  $ syncevolution --configure \
+                  --sync two-way \
+                  scheduleworld addressbook
+
+Change the password for a configuration:
+  $ syncevolution --configure \
+                  --sync-property password=foo \
+                  scheduleworld
+
+Set up another configuration for scheduleworld under a different name:
+  $ syncevolution --configure \
+                  --sync-property user=joe \
+                  --sync-property password=foo \
+                  --template scheduleworld \
+                  scheduleworld_joe
+
+Edit all configuration properties at once:
+  $ syncevolution --print-config scheduleworld >/tmp/config.ini
+  $ $EDITOR /tmp/config.ini
+  $ syncevolution --configure --properties config.ini scheduleworld
+
 
 Configuration
 -------------
 
 The configuration file of a certain <server> is stored in
+   $XDG_CONFIG_HOME/syncevolution/<server>/config.ini
+with " $HOME/.config" as fallback if XDG_CONFIG_HOME is not
+set. Each data source is configured in
+   $XDG_CONFIG_HOME/syncevolution/sources/<source>/config.ini
+
+The configuration of older SyncEvolution releases in the
+following directory is also still supported:
    $HOME/.sync4j/evolution/<server>/spds/syncml/config.txt
 
 The format is a simple list of
@@ -191,25 +308,21 @@ put quotation marks around <value>, they would be treated as part of the
 value itself. Lines starting with a hash (#) after optional leading
 spaces are treated as comments and skipped.
 
-Each data source is configured in
-   $HOME/.sync4j/evolution/<server>/spds/sources/<source>/config.txt
-
-See "scheduleworld/spds/syncml/config.txt" for options in the server
-configuration and "scheduleworld/spds/sources/addressbook/config.txt"
-for options in the data source configuration. In packages of SyncEvolution
-these files might be installed in [/usr/local]/shared/doc/syncevolution.
-Another example configuration "funambol" is provided for use with a 
-local Funambol installation.
-
-Normally at least the following configuration options need to be adapted:
-  spds/syncml
+All supported properties are listed in the template configurations.
+Those which have reasonable defaults do not have to be set and are
+commented out in the template configurations. Normally at least the
+following configuration options need to be adapted:
+  config.ini
       syncURL
-      deviceId
       username
       password
-  spds/sources
+  sources/*/config.ini
       uri
-      evolutionsource
+      type
+
+See "syncevolution --sync-property ?" for options in the server
+configuration and "syncevolution --source-property ?"
+for options in each data source configuration.
 
 Each data source corresponds to one database at the SyncML server.
 The local data source is determined by the type of data given in
@@ -220,9 +333,8 @@ of a data source that SyncEvolution prints then.
 
 The "uri" property is used to identify with which database on the
 SyncML server the local data is to be synchronized. Each server
-usually documents what needs to be configured here. The provided
-configurations for ScheduleWorld and myFUNAMBOL already have this set
-correctly.
+usually documents what needs to be configured here. The template
+configurations already have this set correctly.
 
 One can synchronize with multiple server databases in one run, but the
 same server database can only be accessed once. To synchronize the
@@ -230,9 +342,9 @@ same server database with multiple local data sources, one
 has to setup two independent configurations with different "deviceId"
 settings and synchronize them separately. To create such a setup simply
 copy the whole configuration tree of the server, e.g.:
-  cp -r ~/.sync4j/evolution/localhost ~/.sync4j/evolution/localhost_copy
-and then edit ~/.sync4j/evolution/localhost_copy/spds/syncml/config.txt
-to update the "deviceId" and the sources/*/config.txt files to update
+  cp -r ~/.config/syncevolution/localhost ~/.config/syncevolution/localhost_copy
+and then edit ~/.config/syncevolution/localhost_copy/config.ini
+to update the "deviceId" and the sources/*/config.ini files to update
 the "evolutionsource".
 
 If an Evolution data source requires authentication, the
@@ -246,6 +358,20 @@ empty.
 *** needed as with local calendars and addressbooks can cause
 *** the Evolution backend to hang.
 ***
+
+SSL encryption of the HTTP connection is supported if the underlying
+platform supports it. In order to enable it, use a syncURL with https
+instead of http prefix. Not all servers support this, though. In the
+default configuration, servers must present a trusted certificate
+where the host name of the certificate matches the host name of the
+URL. Configuration settings can be used to relax this checking, but
+this makes the connection less secure and is not recommended.
+
+If you get errors about a missing certificate file under
+/etc/ssl/certs, then check whether the system packages which provide
+that file are installed. On Debian/Ubuntu the package is called
+"ca-certificates". Alternatively it is possible to specify a different
+location of a custom certificate file in the configuration.
 
 
 Automatic Backups and Logging

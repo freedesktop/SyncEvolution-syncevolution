@@ -107,7 +107,7 @@ VProperty* VConverter::readFieldHeader(wchar_t* buffer) {
     //if the header is folded (in .ics files)
     //we need to remove the folding
     wchar_t* headerFolding = NULL;
-    if(headerFolding = wcsstr(header, TEXT("\n "))) {
+    if((headerFolding = wcsstr(header, TEXT("\n "))) != NULL) {
         header[headerFolding - header] = '\0';
     }
 

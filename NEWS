@@ -1,3 +1,16 @@
+SyncEvolution 0.8 beta 2 -> 0,8 beta 3, 17.08.2008
+--------------------------------------------------
+C++ client library: 7.0 plus compatibility patch for Synthesis
+
+* Another revision of updating events in Evolution calendars:
+  the method introduced in 0.8 beta 1 for dealing with
+  detached recurrences did not work with the Evolution Exchange
+  Connector. Now both Exchange and local calendars pass the unit
+  tests again.
+
+* minor code cleanup (testing, writing additional backends)
+
+
 SyncEvolution 0.8 beta 1 -> 0,8 beta 2, 03.08.2008
 --------------------------------------------------
 C++ client library: 7.0 plus compatibility patch for Synthesis

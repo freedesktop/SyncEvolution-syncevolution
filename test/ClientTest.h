@@ -366,6 +366,19 @@ class ClientTest {
 #endif
 
         /**
+         * Overwrite the default 'true' with 'false' to disable
+         * tests which assume that the source being tested
+         * follows certain conventions for the items being exchanged.
+         *
+         * For example, testLinkedItemsInsertParentTwice inserts a
+         * calendar event twice and expects that the source only keeps
+         * one event because the UID has to be kept unique. A dumb
+         * file sync source doesn't know that and would keep two copies
+         * of the same event.
+         */
+        bool sourceKnowsItemSemantic;
+
+        /**
          * called to dump all items into a file, required by tests which need
          * to compare items
          *

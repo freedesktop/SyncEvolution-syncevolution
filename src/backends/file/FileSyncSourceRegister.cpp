@@ -150,8 +150,7 @@ public:
         // Client::Source::file_ical20::testLinkedItemsInsertChildTwice
         //
         // Disable linked item testing to avoid this.
-        config.parentItem =
-            config.childItem = NULL;
+        config.sourceKnowsItemSemantic = false;
     }
 } ICal20Test;
 

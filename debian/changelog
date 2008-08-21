@@ -1,3 +1,9 @@
+syncevolution (1:0.7+0.8-beta3) unstable; urgency=low
+
+  * third beta of SyncEvolution 0.8
+
+ -- Patrick Ohly <patrick.ohly@gmx.de>  Sun, 17 Aug 2008 11:35:42 +0200
+
 syncevolution (1:0.7+0.8-beta1a) unstable; urgency=low
 
   * Disabled support for X-OSSO-CONTACT-STATE on Maemo:

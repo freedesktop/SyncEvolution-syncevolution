@@ -6,11 +6,20 @@ SYNCEVOLUTION_CXXFLAGS = @SYNCEVOLUTION_CXXFLAGS@
 
 SYNCEVOLUTION_LDADD = @SYNCEVOLUTION_LDADD@
 MAINTAINERCLEANFILES = Makefile.in
+EXTRA_DIST = src/core/scitbx/LICENSE_2_0.txt
+
+pkgpyexec_LTLIBRARIES =
+pkglib_LTLIBRARIES =
+noinst_LTLIBRARIES =
+
+if ENABLE_PYTHON
+pkgpyexec_LTLIBRARIES += syncevolution.la
+endif
 
 if ENABLE_MODULES
-pkglib_LTLIBRARIES = libsyncevolution.la
+pkglib_LTLIBRARIES += libsyncevolution.la
 else
-noinst_LTLIBRARIES = libsyncevolution.la
+noinst_LTLIBRARIES += libsyncevolution.la
 endif
 
 VOCL_SOURCES = \
@@ -66,8 +75,15 @@ CORE_SOURCES  = \
 	$(VOCL_SOURCES)
 
 libsyncevolution_la_SOURCES = $(CORE_SOURCES)
-libsyncevolution_la_LIBADD = @FUNAMBOL_LIBS@ @TRANSPORT_LDFLAGS@ @EPACKAGE_LIBS@ @GLIB_LIBS@ @LIBS@ 
-libsyncevolution_la_CXXFLAGS = $(SYNCEVOLUTION_CXXFLAGS)
+libsyncevolution_la_LIBADD = @FUNAMBOL_LIBS@ @TRANSPORT_LDFLAGS@ @EPACKAGE_LIBS@ @GLIB_LIBS@ @CPPUNIT_UNITTESTS_LDFLAGS@ @LIBS@
+libsyncevolution_la_CXXFLAGS = $(SYNCEVOLUTION_CXXFLAGS) @CPPUNIT_UNITTESTS_CXXFLAGS@
+
+syncevolution_la_SOURCES = syncevolutionmodule.cpp \
+	src/core/scitbx/boost_python/container_conversions.h
+syncevolution_la_CXXFLAGS = @PYTHON_CXXFLAGS@
+syncevolution_la_LIBADD = libsyncevolution.la
+syncevolution_la_DEPENDENCIES = libsyncevolution.la
+syncevolution_la_LDFLAGS = -module @PYTHON_LDFLAGS@
 
 # include boost in distribution
 dist-hook:

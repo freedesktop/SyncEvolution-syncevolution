@@ -38,8 +38,19 @@ using namespace std;
 #include <boost/foreach.hpp>
 
 SyncEvolutionCmdline::SyncEvolutionCmdline(int argc, const char * const * argv, ostream &out, ostream &err) :
-    m_argc(argc),
-    m_argv(argv),
+    m_out(out),
+    m_err(err),
+    m_validSyncProps(EvolutionSyncConfig::getRegistry()),
+    m_validSourceProps(EvolutionSyncSourceConfig::getRegistry())
+{
+    m_args.resize(argc);
+    for (int i = 0; i < argc; i++) {
+        m_args[i] = argv[i];
+    }
+}
+
+SyncEvolutionCmdline::SyncEvolutionCmdline(vector<string> args, ostream &out, ostream &err) :
+    m_args(args),
     m_out(out),
     m_err(err),
     m_validSyncProps(EvolutionSyncConfig::getRegistry()),
@@ -48,18 +59,18 @@ SyncEvolutionCmdline::SyncEvolutionCmdline(int argc, const char * const * argv, 
 
 bool SyncEvolutionCmdline::parse()
 {
-    int opt = 1;
-    while (opt < m_argc) {
-        if (m_argv[opt][0] != '-') {
+    size_t opt = 1;
+    while (opt < m_args.size()) {
+        if (m_args[opt][0] != '-') {
             break;
         }
-        if (boost::iequals(m_argv[opt], "--sync") ||
-            boost::iequals(m_argv[opt], "-s")) {
+        if (boost::iequals(m_args[opt], "--sync") ||
+            boost::iequals(m_args[opt], "-s")) {
             opt++;
             string param;
-            string cmdopt(m_argv[opt - 1]);
+            string cmdopt(m_args[opt - 1]);
             if (!parseProp(m_validSourceProps, m_sourceProps,
-                           m_argv[opt - 1], opt == m_argc ? NULL : m_argv[opt],
+                           m_args[opt - 1].c_str(), opt == m_args.size() ? NULL : m_args[opt].c_str(),
                            EvolutionSyncSourceConfig::m_sourcePropSync.getName().c_str())) {
                 return false;
             }
@@ -67,75 +78,75 @@ bool SyncEvolutionCmdline::parse()
             // disable requirement to add --run explicitly in order to
             // be compatible with traditional command lines
             m_run = true;
-        } else if(boost::iequals(m_argv[opt], "--sync-property") ||
-                  boost::iequals(m_argv[opt], "-y")) {
+        } else if(boost::iequals(m_args[opt], "--sync-property") ||
+                  boost::iequals(m_args[opt], "-y")) {
                 opt++;
                 if (!parseProp(m_validSyncProps, m_syncProps,
-                               m_argv[opt - 1], opt == m_argc ? NULL : m_argv[opt])) {
+                               m_args[opt - 1].c_str(), opt == m_args.size() ? NULL : m_args[opt].c_str())) {
                     return false;
                 }
-        } else if(boost::iequals(m_argv[opt], "--source-property") ||
-                  boost::iequals(m_argv[opt], "-z")) {
+        } else if(boost::iequals(m_args[opt], "--source-property") ||
+                  boost::iequals(m_args[opt], "-z")) {
             opt++;
             if (!parseProp(m_validSourceProps, m_sourceProps,
-                           m_argv[opt - 1], opt == m_argc ? NULL : m_argv[opt])) {
+                           m_args[opt - 1].c_str(), opt == m_args.size() ? NULL : m_args[opt].c_str())) {
                 return false;
             }
-        } else if(boost::iequals(m_argv[opt], "--properties") ||
-                  boost::iequals(m_argv[opt], "-r")) {
+        } else if(boost::iequals(m_args[opt], "--properties") ||
+                  boost::iequals(m_args[opt], "-r")) {
             opt++;
             /* TODO */
-            m_err << "ERROR: not implemented yet: " << m_argv[opt - 1] << endl;
+            m_err << "ERROR: not implemented yet: " << m_args[opt - 1] << endl;
             return false;
-        } else if(boost::iequals(m_argv[opt], "--template") ||
-                  boost::iequals(m_argv[opt], "-l")) {
+        } else if(boost::iequals(m_args[opt], "--template") ||
+                  boost::iequals(m_args[opt], "-l")) {
             opt++;
-            if (opt >= m_argc) {
-                usage(true, string("missing parameter for ") + cmdOpt(m_argv[opt - 1]));
+            if (opt >= m_args.size()) {
+                usage(true, string("missing parameter for ") + cmdOpt(m_args[opt - 1].c_str()));
                 return false;
             }
-            m_template = m_argv[opt];
+            m_template = m_args[opt];
             m_configure = true;
             if (boost::trim_copy(m_template) == "?") {
                 dumpServers("Available configuration templates:",
                             EvolutionSyncConfig::getServerTemplates());
                 m_dontrun = true;
             }
-        } else if(boost::iequals(m_argv[opt], "--print-servers")) {
+        } else if(boost::iequals(m_args[opt], "--print-servers")) {
             m_printServers = true;
-        } else if(boost::iequals(m_argv[opt], "--print-config") ||
-                  boost::iequals(m_argv[opt], "-p")) {
+        } else if(boost::iequals(m_args[opt], "--print-config") ||
+                  boost::iequals(m_args[opt], "-p")) {
             m_printConfig = true;
-        } else if(boost::iequals(m_argv[opt], "--configure") ||
-                  boost::iequals(m_argv[opt], "-c")) {
+        } else if(boost::iequals(m_args[opt], "--configure") ||
+                  boost::iequals(m_args[opt], "-c")) {
             m_configure = true;
-        } else if(boost::iequals(m_argv[opt], "--run") ||
-                  boost::iequals(m_argv[opt], "-r")) {
+        } else if(boost::iequals(m_args[opt], "--run") ||
+                  boost::iequals(m_args[opt], "-r")) {
             m_run = true;
-        } else if(boost::iequals(m_argv[opt], "--migrate")) {
+        } else if(boost::iequals(m_args[opt], "--migrate")) {
             m_migrate = true;
-        } else if(boost::iequals(m_argv[opt], "--status") ||
-                  boost::iequals(m_argv[opt], "-t")) {
+        } else if(boost::iequals(m_args[opt], "--status") ||
+                  boost::iequals(m_args[opt], "-t")) {
             m_status = true;
-        } else if(boost::iequals(m_argv[opt], "--quiet") ||
-                  boost::iequals(m_argv[opt], "-q")) {
+        } else if(boost::iequals(m_args[opt], "--quiet") ||
+                  boost::iequals(m_args[opt], "-q")) {
             m_quiet = true;
-        } else if(boost::iequals(m_argv[opt], "--help") ||
-                  boost::iequals(m_argv[opt], "-h")) {
+        } else if(boost::iequals(m_args[opt], "--help") ||
+                  boost::iequals(m_args[opt], "-h")) {
             m_usage = true;
-        } else if(boost::iequals(m_argv[opt], "--version")) {
+        } else if(boost::iequals(m_args[opt], "--version")) {
             m_version = true;
         } else {
-            usage(false, string(m_argv[opt]) + ": unknown parameter");
+            usage(false, string(m_args[opt]) + ": unknown parameter");
             return false;
         }
         opt++;
     }
 
-    if (opt < m_argc) {
-        m_server = m_argv[opt++];
-        while (opt < m_argc) {
-            m_sources.insert(m_argv[opt++]);
+    if (opt < m_args.size()) {
+        m_server = m_args[opt++];
+        while (opt < m_args.size()) {
+            m_sources.insert(m_args[opt++]);
         }
     }
 
@@ -152,7 +163,7 @@ bool SyncEvolutionCmdline::run() {
                     EvolutionSyncConfig::getServers());
     } else if (m_dontrun) {
         // user asked for information
-    } else if (m_argc == 1) {
+    } else if (m_args.size() == 1) {
         const SourceRegistry &registry(EvolutionSyncSource::getSourceRegistry());
         boost::shared_ptr<FilterConfigNode> configNode(new VolatileConfigNode());
         boost::shared_ptr<FilterConfigNode> hiddenNode(new VolatileConfigNode());
@@ -214,7 +225,7 @@ bool SyncEvolutionCmdline::run() {
                 dumpProperties(*sourceProps, EvolutionSyncSourceConfig::getRegistry());
             }
         }
-    } else if (m_server == "" && m_argc > 1) {
+    } else if (m_server == "" && m_args.size() > 1) {
         // Options given, but no server - not sure what the user wanted?!
         usage(true, "server name missing");
         return false;
@@ -549,19 +560,19 @@ void SyncEvolutionCmdline::usage(bool full, const string &error, const string &p
     ostream &out(error.empty() ? m_out : m_err);
 
     out << "Show available sources:" << endl;
-    out << "  " << m_argv[0] << endl;
+    out << "  " << m_args[0] << endl;
     out << "Show information about configuration(s):" << endl;
-    out << "  " << m_argv[0] << " --print-servers" << endl;
-    out << "  " << m_argv[0] << " --print-config [--quiet] <server> [sync|<source ...]" << endl;
+    out << "  " << m_args[0] << " --print-servers" << endl;
+    out << "  " << m_args[0] << " --print-config [--quiet] <server> [sync|<source ...]" << endl;
     out << "Show information about SyncEvolution:" << endl;
-    out << "  " << m_argv[0] << " --help|-h" << endl;
-    out << "  " << m_argv[0] << " --version" << endl;
+    out << "  " << m_args[0] << " --help|-h" << endl;
+    out << "  " << m_args[0] << " --version" << endl;
     out << "Run a synchronization:" << endl;
-    out << "  " << m_argv[0] << " <server> [<source> ...]" << endl;
-    out << "  " << m_argv[0] << " --run <options for run> <server> [<source> ...]" << endl;
+    out << "  " << m_args[0] << " <server> [<source> ...]" << endl;
+    out << "  " << m_args[0] << " --run <options for run> <server> [<source> ...]" << endl;
     out << "Modify configuration:" << endl;
-    out << "  " << m_argv[0] << " --configure <options for configuration> <server> [<source> ...]" << endl;
-    out << "  " << m_argv[0] << " --migrate <server>" << endl;
+    out << "  " << m_args[0] << " --configure <options for configuration> <server> [<source> ...]" << endl;
+    out << "  " << m_args[0] << " --migrate <server>" << endl;
     if (full) {
         out << endl <<
             "Options:" << endl <<
@@ -1541,22 +1552,15 @@ private:
         TestCmdline(const char *arg, ...) {
             va_list argList;
             va_start (argList, arg);
+            m_args.push_back("client-test");
             for (const char *curr = arg;
                  curr;
                  curr = va_arg(argList, const char *)) {
-                m_argvstr.push_back(curr);
+                m_args.push_back(curr);
             }
             va_end(argList);
 
-            m_argv.reset(new const char *[m_argvstr.size() + 1]);
-            m_argv[0] = "client-test";
-            for (size_t index = 0;
-                 index < m_argvstr.size();
-                 ++index) {
-                m_argv[index + 1] = m_argvstr[index].c_str();
-            }
-
-            m_cmdline.set(new SyncEvolutionCmdline(m_argvstr.size() + 1, m_argv.get(), m_out, m_err), "cmdline");
+            m_cmdline.set(new SyncEvolutionCmdline(m_args, m_out, m_err), "cmdline");
         }
 
         void doit() {
@@ -1573,8 +1577,7 @@ private:
         cxxptr<SyncEvolutionCmdline> m_cmdline;
 
     private:
-        vector<string> m_argvstr;
-        boost::scoped_array<const char *> m_argv;
+        vector<string> m_args;
     };
 
     string ScheduleWorldConfig() {

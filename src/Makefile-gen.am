@@ -75,7 +75,7 @@ syncevolution_SOURCES = \
 # either way this does not lead to a dependency on those libs - done explicitly
 syncevolution_LDADD = $(CORE_LDADD)
 syncevolution_CXXFLAGS = $(SYNCEVOLUTION_CXXFLAGS)
-syncevolution_DEPENDENCIES = $(EXTRA_LTLIBRARIES) $(CORE_DEP)
+syncevolution_DEPENDENCIES = $(CORE_DEP)
 
 # FUNAMBOL_SUBDIR specifies the directory where we compile
 # the client library by invoking make there.
@@ -125,7 +125,7 @@ client_test_LDADD = $(FUNAMBOL_SUBDIR)/src/libfunambol.la $(CORE_LDADD)
 # they ensure that all files are in place to *run* client-test,
 # but in particular the "all" dependency causes a rebuild
 # even if the actual input files haven't changed.
-client_test_DEPENDENCIES = all $(EXTRA_LTLIBRARIES) $(CORE_DEP) $(CLIENT_LIB_TEST_FILES) synccompare
+client_test_DEPENDENCIES = all $(CORE_DEP) $(CLIENT_LIB_TEST_FILES) synccompare
 
 # copy test files for several reasons:
 # - automake expects them here

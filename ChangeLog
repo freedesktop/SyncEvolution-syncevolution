@@ -1,3 +1,143 @@
+2008-08-17 09:26  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* configure-pre.in, src/core/Makefile.am: fixed libcurl link error
+	  with --enable-shared
+
+2008-08-17 09:26  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/backends/sqlite/configure-sub.in: avoid libsqlite dependency
+	  if it is not needed
+
+2008-08-17 08:50  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* HACKING, configure-pre.in, src/Makefile-gen.am: removed obsolete
+	  LIBDBUS hack
+
+2008-08-17 08:45  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* Makefile-gen.am: removed unused BACKEND_REGISTRIES substitution
+	  from regenerated configure.in: it is already part of
+	  src/Makefile.am
+
+2008-08-17 08:19  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* test/runtests.py: only invoke client-test once; suppress known SW
+	  'new client' problem; test 'text' source with Funambol
+
+2008-08-16 10:35  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/Makefile-gen.am: previous commit disabled 'all' target - use
+	  BUILT_SOURCES instead
+
+2008-08-16 10:02  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/Makefile-gen.am, src/client-test-app.cpp,
+	  src/core/EvolutionSyncSource.h: fixed issue with inconsistent use
+	  of ClientTest.h after copying it to SyncEvolution
+
+2008-08-16 07:39  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/backends/evolution/EvolutionCalendarSource.cpp,
+	  src/backends/evolution/EvolutionCalendarSource.h,
+	  src/backends/file/FileSyncSource.cpp,
+	  src/backends/file/FileSyncSource.h,
+	  src/backends/sqlite/SQLiteContactSource.cpp,
+	  src/backends/sqlite/SQLiteContactSource.h,
+	  src/core/EvolutionSyncSource.cpp, src/core/EvolutionSyncSource.h,
+	  src/core/TrackingSyncSource.h:
+	  EvolutionSyncSource::sleepSinceModification(): delay after a sync
+	  only if needed, must be requested by sources
+
+2008-08-16 07:38  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/backends/evolution/EvolutionCalendarSource.cpp: preserve
+	  child events when updating parent without relying on
+	  CALOBJ_MOD_THIS
+
+2008-08-16 07:37  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* test/ClientTest.cpp: testLinkedItemsInsertBothUpdateParent:
+	  updating parent may also update child
+
+2008-08-16 07:36  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/client-test-app.cpp: evo user/passwd must always be set for
+	  Client::Sync
+
+2008-08-16 07:35  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/backends/evolution/EvolutionCalendarSource.h: better comment
+	  for returnOnlyChildren in removeEvents: parent is always removed
+
+2008-08-16 07:34  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/backends/evolution/EvolutionCalendarSource.cpp,
+	  src/backends/evolution/EvolutionCalendarSource.h,
+	  src/backends/evolution/EvolutionMemoSource.cpp,
+	  test/ClientTest.cpp, test/ClientTest.h: calendar synchronization
+	  with Evolution Exchange Connector works again
+	  
+	  CALOBJ_MOD_THIS for parent items caused problems. A *long* delay
+	  after a sync was needed, otherwise the Connector returned garbage
+	  during further accesses (e.g., old child event instead of the
+	  updated one).
+	  
+	  Some code cleanup (creating ItemID from LUID).
+	  
+	  Temporarily forked the client test (introduced update items for
+	  child/parent, relaxed semantic selectable at runtime).
+
+2008-08-16 07:31  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* test/ClientTest.cpp, test/ClientTest.h: copied r_v70ga from C++
+	  client lib because some changes will be necessary
+
+2008-08-12 18:28  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/core/SyncEvolutionCmdline.cpp,
+	  src/core/SyncEvolutionConfig.cpp: enabled 'memo' source in
+	  Funambol template
+
+2008-08-09 10:26  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/backends/evolution/EvolutionCalendarSource.cpp,
+	  src/backends/evolution/EvolutionContactSource.cpp,
+	  src/backends/evolution/EvolutionMemoSource.cpp,
+	  src/backends/file/FileSyncSource.cpp,
+	  src/core/EvolutionSyncClient.cpp, src/core/EvolutionSyncClient.h,
+	  src/core/EvolutionSyncSource.cpp, src/core/EvolutionSyncSource.h,
+	  src/core/FileConfigNode.cpp, src/core/SyncEvolutionUtil.cpp:
+	  cleaned up error reporting: errno now passed to throwError
+
+2008-08-09 09:06  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/core/EvolutionSyncSource.h:
+	  CLIENT_TEST_EVOLUTION_USER/PASSWORD and warning about init order
+
+2008-08-09 08:57  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/client-test-app.cpp: added
+	  CLIENT_TEST_EVOLUTION_USER/PASSWORD so that backends which
+	  require authentication can now also be tested
+
+2008-08-05 20:11  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/Makefile-gen.am: added missing imemo20.ics test cases to
+	  build
+
+2008-08-05 20:09  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* src/backends/file/FileSyncSourceRegister.cpp: disable linked item
+	  testing: file backend does not support the special semantic
+
+2008-08-04 19:06  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* Makefile-gen.am: include Doxyfile in distribution
+
+2008-08-03 20:56  Patrick Ohly <patrick.ohly@gmx.de>
+
+	* ChangeLog: updated
+
 2008-08-03 20:56  Patrick Ohly <patrick.ohly@gmx.de>
 
 	* src/core/EvolutionSyncSource.cpp, src/core/EvolutionSyncSource.h:

@@ -55,8 +55,8 @@ class EvolutionSyncClient : public SyncClient, public EvolutionSyncConfig, publi
   public:
     /**
      * @param server     identifies the server config to be used
-     * @param syncMode   setting this overrides the sync mode from the config
      * @param doLogging  write additional log and datatbase files about the sync
+     * @param sources    overrides the set of active sources
      */
     EvolutionSyncClient(const string &server,
                         bool doLogging = false,
@@ -77,10 +77,28 @@ class EvolutionSyncClient : public SyncClient, public EvolutionSyncConfig, publi
      */
     virtual string askPassword(const string &descr);
 
+    /**
+     * controls verbosity during sync
+     */
     bool getQuiet() { return m_quiet; }
     void setQuiet(bool quiet) { m_quiet = quiet; }
+
+    /**
+     * override preferred sync mode of all active sources without
+     * enabling sources which have no sync mode set in the config
+     */
     SyncMode getSyncMode() { return m_syncMode; }
     void setSyncMode(SyncMode syncMode) { m_syncMode = syncMode; }
+
+    /**
+     * intercept config filters
+     *
+     * This call removes the "sync" source property and remembers
+     * it separately because it has to be applied to only the active
+     * sync sources; the generic config handling code would apply
+     * it to all sources.
+     */
+    virtual void setConfigFilter(bool sync, const FilterConfigNode::ConfigFilter &filter);
 
     /**
      * Executes the sync, throws an exception in case of failure.
@@ -107,8 +125,7 @@ class EvolutionSyncClient : public SyncClient, public EvolutionSyncConfig, publi
     static void throwError(const string &error);
 
     /**
-     * throw an exception after an operation failed and
-     * remember that this instance has failed
+     * throw an exception after an operation failed
      *
      * output format: <action>: <error string>
      *
@@ -138,21 +155,10 @@ class EvolutionSyncClient : public SyncClient, public EvolutionSyncConfig, publi
      */
     static void startLoopThread();
 
-
     /* AbstractSyncConfig API */
     virtual AbstractSyncSourceConfig* getAbstractSyncSourceConfig(const char* name) const;
     virtual AbstractSyncSourceConfig* getAbstractSyncSourceConfig(unsigned int i) const;
     virtual unsigned int getAbstractSyncSourceConfigsCount() const;
-
-    /**
-     * intercept config filters
-     *
-     * This call removes the "sync" source property and remembers
-     * it separately because it has to be applied to only the active
-     * sync sources; the generic config handling code would apply
-     * it to all sources.
-     */
-    virtual void setConfigFilter(bool sync, const FilterConfigNode::ConfigFilter &filter);
 
   protected:
     /**

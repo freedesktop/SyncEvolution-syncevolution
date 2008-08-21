@@ -24,6 +24,8 @@
 class EvolutionSyncSource;
 
 #include <set>
+#include <vector>
+#include <iostream>
 using namespace std;
 
 #include <boost/shared_ptr.hpp>
@@ -36,7 +38,8 @@ public:
      * @param out      stdout stream for normal messages
      * @param err      stderr stream for error messages
      */
-    SyncEvolutionCmdline(int argc, const char * const *argv, ostream &out, ostream &err);
+    SyncEvolutionCmdline(int argc, const char * const *argv, ostream &out = cout, ostream &err = cerr);
+    SyncEvolutionCmdline(const vector<string> args, ostream &out = cout, ostream &err = cerr);
 
     /**
      * parse the command line options
@@ -57,8 +60,7 @@ private:
         bool m_value;
     };
 
-    int m_argc;
-    const char * const * m_argv;
+    vector<string> m_args;
     ostream &m_out, &m_err;
 
     Bool m_quiet;

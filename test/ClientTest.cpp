@@ -219,8 +219,10 @@ void LocalTests::addTests() {
                 ADD_TEST(LocalTests, testLinkedItemsChildChangesParent);
                 ADD_TEST(LocalTests, testLinkedItemsRemoveParentFirst);
                 ADD_TEST(LocalTests, testLinkedItemsRemoveNormal);
-                ADD_TEST(LocalTests, testLinkedItemsInsertParentTwice);
-                ADD_TEST(LocalTests, testLinkedItemsInsertChildTwice);
+                if (config.sourceKnowsItemSemantic) {
+                    ADD_TEST(LocalTests, testLinkedItemsInsertParentTwice);
+                    ADD_TEST(LocalTests, testLinkedItemsInsertChildTwice);
+                }
                 if (config.parentItemUpdate) {
                     ADD_TEST(LocalTests, testLinkedItemsParentUpdate);
                     ADD_TEST(LocalTests, testLinkedItemsInsertBothUpdateParent);
@@ -2657,6 +2659,7 @@ void ClientTest::getTestData(const char *type, Config &config)
     memset(&config, 0, sizeof(config));
     char *numitems = getenv("CLIENT_TEST_NUM_ITEMS");
     config.numItems = numitems ? atoi(numitems) : 100;
+    config.sourceKnowsItemSemantic = true;
 
     if (!strcmp(type, "vcard30")) {
         config.sourceName = "vcard30";

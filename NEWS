@@ -1,3 +1,16 @@
+SyncEvolution 0.8.1 -> 0.8.1a, 15.12.2008
+-----------------------------------------
+C++ client library: 7.0 plus some patches, see github
+repository referenced in configure script.
+
+A minor bug fix release, updating only necessary on Mac OS X.
+
+* #2307976 "Trace/BPT trap - sync failure": occurs randomly in
+  Mac OS X specific transport layer of the Funambol C++ client
+  library. Avoided in 0.8.1a by using libcurl as transport,
+  as in 0.7.
+
+
 SyncEvolution 0.8 -> 0.8.1, 11.10.2008
 --------------------------------------
 C++ client library: 7.0 plus some patches, see github

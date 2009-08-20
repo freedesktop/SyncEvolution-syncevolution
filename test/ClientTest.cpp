@@ -3485,6 +3485,7 @@ void ClientTest::getTestData(const char *type, Config &config)
             "TITLE:developer\n"
             "FN:John Doe\n"
             "N:Doe;John;;;\n"
+            "TEL;TYPE=WORK;TYPE=VOICE:123456\n"
             "X-EVOLUTION-FILE-AS:Doe\\, John\n"
             "X-MOZILLA-HTML:TRUE\n"
             "BDAY:2006-01-08\n"
@@ -3909,8 +3910,14 @@ void CheckSyncReport::check(SyncMLStatus status, SyncReport &report) const
                                                       SyncSourceReport::ITEM_ANY,
                                                       SyncSourceReport::ITEM_REJECT));
 
+        const char* checkSyncModeStr = getenv("CLIENT_TEST_NOCHECK_SYNCMODE");
+        bool checkSyncMode = true;
+        if (checkSyncModeStr && 
+                (!strcmp(checkSyncModeStr, "1") || !strcasecmp(checkSyncModeStr, "t"))) {
+            checkSyncMode = false;
+        }
 
-        if (syncMode != SYNC_NONE) {
+        if (syncMode != SYNC_NONE && checkSyncMode) {
             CLIENT_TEST_EQUAL(name, syncMode, source.getFinalSyncMode());
         }
 

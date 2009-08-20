@@ -81,7 +81,7 @@ def step1(input, result, indents, dir, resulturi):
         fout,fin=popen2.popen2('find `dirname '+input+'` -type d -name *'+tag)
         s = fout.read().rpartition('/')[2].rpartition('\n')[0]
         result.write(' path ="'+s+'">')
-	'''check the result'''
+	    '''check the result'''
         if(not os.system("grep -q '^"+tag+".* disabled in configuration$' "+input)):
             result.write("skipped")
         elif(os.system ("grep -q '^"+tag+" successful' "+input)):

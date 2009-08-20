@@ -86,6 +86,19 @@
             i=i+1;
           }
         }
+        // If vcalendar1.0, rrule is not secondly, minutely, or hourly, we strip time information
+        // and only reserve date information
+        if (ITEMDATATYPE()=="vCalendar10" && RR_FREQ!="h" && RR_FREQ!="m" && RR_FREQ!="s") {
+          timestamp exdate;
+          i = 0;
+          while (i<SIZE(EXDATES)) {
+            exdate = EXDATES[i];
+            if (!ISDATEONLY(exdate)) {
+              EXDATES[i] = DATEONLY(exdate);
+            }
+            i=i+1;
+          }  
+        }
 
         // - shape attendees (and make sure ATTENDEES[] is assigned even for empty email addresses)
         i=0;

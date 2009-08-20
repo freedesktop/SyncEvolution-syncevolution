@@ -1,0 +1,146 @@
+This document is used to show interoperability test information with Mobical server.
+http://bugzilla.moblin.org/show_bug.cgi?id=3009
+
+* The Mobical Server's device information 
+  mobical Data Synchronization Server v.7.1.1
+    Man=Tactel AB
+    Mod=Mobical Sync Server
+    SwV=3.0
+    HwV=-
+    FwV=-
+    OEM=-
+    DevID=http://www.mobical.net/sync/server
+    DevTyp=server
+    VerDTD=1.2
+    UTC=-
+    SupportLargeObjs=-
+    SupportNumberOfChanges=-
+
+* Test Environment Variables Settings
+  CLIENT_TEST_SERVER=mobical CLIENT_TEST_EVOLUTION_PREFIX=file:///tmp/test/ \
+  CLIENT_TEST_MAX_ITEMSIZE=1                                                \
+  CLIENT_TEST_NOCHECK_SYNCMODE=1                                            \
+  CLIENT_TEST_SKIP=Client::Sync::vcard21::testRefreshFromClientSync,        \
+  Client::Sync::vcard21::testSlowSyncSemantic,                              \
+  Client::Sync::vcard21::testRefreshStatus,                                 \
+  Client::Sync::vcard21::testDelete,                                        \
+  Client::Sync::vcard21::testItemsXML,                                      \
+  Client::Sync::vcard21::testOneWayFromServer,                              \
+  Client::Sync::vcard21::testRetry,Client::Sync::vcard21::Suspend,          \
+  Client::Sync::ical20::testRefreshFromClientSync,                          \
+  Client::Sync::ical20::testSlowSyncSemantic,                               \
+  Client::Sync::ical20::testRefreshStatus,                                  \
+  Client::Sync::ical20::testDelete,                                         \
+  Client::Sync::ical20::testItemsXML,                                       \
+  Client::Sync::ical20::testOneWayFromServer,                               \
+  Client::Sync::ical20::testRetry,Client::Sync::vcard21::Suspend,           \
+  Client::Sync::itodo20::testRefreshFromClientSync,                         \
+  Client::Sync::itodo20::testSlowSyncSemantic,                              \
+  Client::Sync::itodo20::testRefreshStatus,                                 \
+  Client::Sync::itodo20::testDelete,                                        \
+  Client::Sync::itodo20::testItemsXML,                                      \
+  Client::Sync::itodo20::testOneWayFromServer,                              \
+  Client::Sync::itodo20::testRetry,Client::Sync::vcard21::Suspend,          \
+  Client::Sync::text::testRefreshFromClientSync,                            \
+  Client::Sync::text::testSlowSyncSemantic,                                 \
+  Client::Sync::text::testRefreshStatus,                                    \
+  Client::Sync::text::testDelete,                                           \
+  Client::Sync::text::testItemsXML,                                         \
+  Client::Sync::text::testOneWayFromServer,                                 \
+  Client::Sync::text::testRetry,Client::Sync::vcard21::Suspend,             \
+  
+ 
+* Test Profiles Settings
+  N/A
+* Data formats we need to test:
+Client::Sync::vcard21
+Client::Sync::ical20
+Client::Sync::itodo20
+Client::Sync::text
+
+* Know Limitations in Mobical server:
+All
+  -- If no data of any type of PIM in Mobical server, it always initiates a slow-sync. 
+     This causes failures of testSlowSyncSemantic, testRefreshStatus, testDelete,
+     testOneWayFromServer,testRefreshFromClientSync.
+  -- It fails in xml mode due to devinfo wrapped with cdata type
+     This causes failure of testItemsXML.
+vCard21
+  -- Below properties are not supported:
+     CALURI, CATEGORIES, FBURL, NICKNAME, X-MOZILLA-HTML, X-EVOLUTION-FILE-AS, X-AIM, 
+     X-ANNIVERSARY, X-SPOUSE, X-EVOLUTION-BLOG-URL, X-EVOLUTION-VIDEO-URL, X-GROUPWISE, X-ICQ, 
+     X-YAHOO, X-ASSISTANT
+  -- The parameter 'X-EVOLUTION-URI-SLOT'of properties like 'TEL' and 'EMAIL' is lost
+  -- 'PHOTO' is compressed by server but still be correct 
+  -- 'FN' is not reserved and is replaced by server's composition of 'N' 
+  -- 'NOTE' length is less than 4000
+  -- vcard must have one of 'tel', 'email', or 'url','addr', otherwise, this vcard will 
+     not treat as a full item and server won't send them to client when sync
+  -- 'ADR' if it has no type information,
+  -- 'N' has parser's bugs for escaped char "\;"
+  -- 'BDAY' is always one-day behind the date client sends to server
+  -- ‘ORG’ property only reserves its first field ‘org name’
+ical20
+  -- Only support vCalendar1.0
+  -- Only Below properties are support by server:
+     DTSTART, DTEND, SUMMARY, DESCRIPTION, LOCATION, CATEGORIES, LAST-MODIFIED, DCREATED, CLASS, RRULE, EXRULE, RDATE, EXDATE, DTSTART, AALARM, DALARM
+  -- Below properties are lost by server though they are in the support list:
+     CLASS, AALARM, DALARM
+  -- Below properties are not accepted but in our test:
+     TRANSP, SEQUENCE,UID,RECURRENCE-ID, ATTENDEE,ORGANIZER
+  -- Timezone related information is lost by server: TZ, DAYLIGHT
+  -- DTSTART, DTEND: if no timezone information and their value are not UTC time, server will convert them into UTC time according to your account timezone information
+  -- If RRULE is 'yearly', server converts it into dayofyear mode. That is not supported by synthesis 
+  -- The 'UNTIL' component of the 'RRULE' property is converted to UTC time if it is floating time
+  -- The value of 'EXDATE' property is converted to UTC time if it is floating time
+itodo20
+  -- Only support vCalendar1.0
+  -- Only below properties are supported by server:
+     DUE, COMPLETED, LAST-COMPLETED, DCREATED, DALARM, AALARM, DESCRIPTION, SUMMARY, STATUS, CATEGORIES, PRIORITY
+  -- 'PRIORITY': if value is '0', it is lost by server
+  -- Below properties are not accepted but in our test:
+     UID, DTSTART,PERCENT-COMPLETE,SEQUENCE, URL, CLASS
+text
+  -- N/A
+
+* Known test failures:
+Client::Sync::vcard21
+  -- Client::Sync::vcard21::testRefreshFromClientSync
+     Client::Sync::vcard21::testRefreshStatus 
+     Client::Sync::vcard21::testSlowSyncSemantic
+     Client::Sync::vcard21::testDelete
+     Client::Sync::vcard21::testItemsXML
+     Client::Sync::vcard21::testOneWayFromServer
+     Client::Sync::vcard21::testRetry
+     Client::Sync::vcard21::Suspend
+
+Client::Sync::ical20
+  -- Client::Sync::ical20::testRefreshFromClientSync
+     Client::Sync::ical20::testRefreshStatus
+     Client::Sync::ical20::testSlowSyncSemantic
+     Client::Sync::ical20::testDelete
+     Client::Sync::ical20::testItemsXML
+     Client::Sync::ical20::testOneWayFromServer
+     Client::Sync::ical20::testRetry
+     Client::Sync::ical20::Suspend
+
+Client::Sync::itodo20
+  -- Client::Sync::itodo20::testRefreshFromClientSync
+     Client::Sync::itodo20::testRefreshStatus
+     Client::Sync::itodo20::testSlowSyncSemantic
+     Client::Sync::itodo20::testDelete
+     Client::Sync::itodo20::testOneWayFromServer
+     Client::Sync::itodo20::testItemsXML
+     Client::Sync::itodo20::testRetry
+     Client::Sync::itodo20::Suspend
+
+
+Client::Sync::text
+  -- Client::Sync::text::testRefreshFromClientSync
+     Client::Sync::text::testRefreshStatus
+     Client::Sync::text::testSlowSyncSemantic
+     Client::Sync::text::testDelete
+     Client::Sync::text::testOneWayFromServer
+     Client::Sync::text::testItemsXML
+     Client::Sync::text::testRetry
+     Client::Sync::text::Suspend

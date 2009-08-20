@@ -48,6 +48,7 @@ ical20
   -- Below properties lose parameters by server:
      ORGANIZER(CN)
      http://forge.ow2.org/tracker/index.php?func=detail&aid=313968&group_id=96&atid=100096
+  -- If 'BYMONTHDAY' of 'RRULE' is not presented in 'monthly', funambol will generate a 'BYMONTHDAY' part  automatically. 
 itodo20
   -- Below properties are lost:
      UID, SEQUENCE, TRANSP, LAST-MODIFIED, X-EVOLUTION-ALARM-UID, STATUS, URL
@@ -64,7 +65,6 @@ Client::Sync::vcard21
 
 Client::Sync::ical20
   -- Client::Sync::ical20::testItems
-  -- Client::Sync::ical20::testItemsXML
 
 Client::Sync::itodo20
   -- NONE

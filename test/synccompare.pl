@@ -57,6 +57,8 @@ my $server = $ENV{CLIENT_TEST_SERVER};
 my $client = $ENV{CLIENT_TEST_CLIENT} || "evolution";
 my $scheduleworld = $server =~ /scheduleworld/;
 my $synthesis = $server =~ /synthesis/;
+#my $zyb = $server =~ /zyb/;
+my $mobical = $server =~ /mobical/;
 
 # TODO: this hack ensures that any synchronization is limited to
 # properties supported by Synthesis. Remove this again.
@@ -235,7 +237,7 @@ sub Normalize {
     s;^BEGIN:VTIMEZONE.*?^TZID:/[^/\n]*/[^/\n]*/(\S+).*^END:VTIMEZONE;BEGIN:VTIMEZONE\nTZID:$1 [...]\nEND:VTIMEZONE;gms;
     s;TZID=/[^/\n]*/[^/\n]*/(.*)$;TZID=$1;gm;
 
-    if ($scheduleworld || $egroupware || $synthesis || $addressbook || $funambol ||$google) {
+    if ($scheduleworld || $egroupware || $synthesis || $addressbook || $funambol ||$google || $mobical) {
       # does not preserve X-EVOLUTION-UI-SLOT=
       s/^(\w+)([^:\n]*);X-EVOLUTION-UI-SLOT=\d+/$1$2/mg;
     }
@@ -247,7 +249,7 @@ sub Normalize {
       s;TZID(=|:)/(scheduleworld.com|softwarestudio.org)/Olson_\d+_\d+/;TZID$1/foo.com/Olson_20000101_1/;mg;
     }
 
-    if ($synthesis) {
+    if ($synthesis || $mobical) {
       # only preserves ORG "Company", but loses "Department" and "Office"
       s/^ORG:([^;:\n]+)(;[^\n]*)/ORG:$1/mg;
     }
@@ -353,6 +355,22 @@ sub Normalize {
     if ($funambol || $egroupware) {
       # NOTE may be truncated due to length resistrictions
       s/^(NOTE(;[^:;\n]*)*:.{0,160}).*(\r?\n?)/$1$3/gm;
+    }
+    #if ($zyb || $mobical) {
+    if ($mobical) {
+      s/^(CALURI|CATEGORIES|FBURL|NICKNAME|X-MOZILLA-HTML|PHOTO|X-EVOLUTION-FILE-AS|X-ANNIVERSARY|X-ASSISTANT|X-EVOLUTION-BLOG-URL|X-EVOLUTION-VIDEO-URL|X-GROUPWISE|X-ICQ|X-MANAGER|X-SPOUSE|X-YAHOO|X-AIM)(;[^:;\n]*)*:.*\r?\n?//gm;
+
+      # some workrounds here for mobical's bug 
+      s/^(FN|BDAY)(;[^:;\n]*)*:.*\r?\n?//gm;
+
+      if (/^BEGIN:VEVENT/m ) {
+        s/^(UID|SEQUENCE|CLASS|TRANSP|RECURRENCE-ID|ATTENDEE|ORGANIZER|AALARM|DALARM)(;[^:;\n]*)*:.*\r?\n?//gm;
+      }
+
+      if (/^BEGIN:VTODO/m ) {
+        s/^(UID|SEQUENCE|DTSTART|URL|PERCENT-COMPLETE|CLASS)(;[^:;\n]*)*:.*\r?\n?//gm;
+        s/^PRIORITY:0\r?\n?//gm;
+      }
     }
 
     # treat X-MOZILLA-HTML=FALSE as if the property didn't exist

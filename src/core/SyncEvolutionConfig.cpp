@@ -165,6 +165,7 @@ EvolutionSyncConfig::ServerList EvolutionSyncConfig::getServerTemplates()
     result.addDefaultTemplate("Memotoo", "http://www.memotoo.com");
     result.addDefaultTemplate("Google", "http://m.google.com/sync");
     result.addDefaultTemplate("ZYB", "http://www.zyb.com");
+    result.addDefaultTemplate("Mobical", "http://www.mobical.net");
 
     result.sort();
     return result;
@@ -338,6 +339,17 @@ boost::shared_ptr<EvolutionSyncConfig> EvolutionSyncConfig::createServerTemplate
         source = config->getSyncSourceConfig("memo");
         source->setURI("note");
         source->setSync("disabled");
+    } else if (boost::iequals(server, "mobical")) {
+        config->setSyncURL("http://www.mobical.net/sync/server");
+        config->setWebURL("http://www.mobical.net");
+        source = config->getSyncSourceConfig("addressbook");
+        source->setURI("con");
+        source = config->getSyncSourceConfig("calendar");
+        source->setURI("cal");
+        source = config->getSyncSourceConfig("todo");
+        source->setURI("task");
+        source = config->getSyncSourceConfig("memo");
+        source->setURI("pnote");
     } else {
         config.reset();
     }

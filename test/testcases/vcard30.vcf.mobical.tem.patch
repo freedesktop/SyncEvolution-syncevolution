@@ -1,0 +1,189 @@
+@@ -4,6 +4,7 @@
+ NOTE:triggers parser bug in Funambol 3.0: trailing = is mistaken for soft line break=
+ FN:parserbug=
+ N:parserbug=
++URL:http://john.doe.com
+ X-EVOLUTION-FILE-AS:parserbug=
+ END:VCARD
+ 
+@@ -14,6 +15,7 @@
+ FN:incomplete
+ N:incomplete
+ EMAIL:
++URL:http://john.doe.com
+ X-EVOLUTION-FILE-AS:incomplete
+ END:VCARD
+ 
+@@ -26,6 +28,7 @@
+  before a space\, 3.0 inserts line break plus space.
+ FN:long line
+ N:line;long;;;
++URL:http://john.doe.com
+ X-EVOLUTION-FILE-AS:line\, long
+ END:VCARD
+ 
+@@ -35,6 +38,7 @@
+ NOTE:ampersand entity &amp\; less-than entity &lt\;
+ FN:xml entities
+ N:xml;entities;;;
++URL:http://john.doe.com
+ X-EVOLUTION-FILE-AS:xml\, entities
+ END:VCARD
+ 
+@@ -44,6 +48,7 @@
+ NOTE:a colon is not a special character so here it comes : and not quoting necessary
+ FN:colon
+ N:colon;unquoted;;;
++URL:http://john.doe.com
+ X-EVOLUTION-FILE-AS:colon\, unquoted
+ END:VCARD
+ 
+@@ -53,6 +58,7 @@
+ NOTE:here are some quotation marks: single ' double " back ` - none of them is special
+ FN:quotation marks
+ N:marks;quotation;;;
++URL:http://john.doe.com
+ X-EVOLUTION-FILE-AS:marks\, quotation
+ END:VCARD
+ 
+@@ -62,6 +68,7 @@
+ NOTE:Spouse's Name: foobar
+ FN:spouse name
+ N:name;spouse;;;
++URL:http://john.doe.com
+ X-EVOLUTION-FILE-AS:spouse\, name
+ END:VCARD
+ 
+@@ -71,6 +78,7 @@
+ NOTE;CHARSET="UTF-8":Tests charset specification with quotation marks.
+ FN:charset
+ N:set;char;;;
++URL:http://john.doe.com
+ X-EVOLUTION-FILE-AS:set\, char
+ END:VCARD
+ 
+@@ -118,6 +126,7 @@
+ NOTE:Here are some special characters: comma \, colon : semicolon \;
+ FN:special characters
+ N:characters;special;;;
++URL:http://john.doe.com
+ X-EVOLUTION-FILE-AS:characters\, special
+ X-EVOLUTION-BLOG-URL:
+ CALURI:
+@@ -161,7 +170,7 @@
+ X-EVOLUTION-MANAGER:John Doe Senior
+ X-EVOLUTION-ASSISTANT:John Doe Junior
+ NICKNAME:user1
+-BDAY:2006-01-08
++BDAY:2007-03-01
+ X-EVOLUTION-ANNIVERSARY:2006-01-09
+ X-EVOLUTION-SPOUSE:Joan Doe
+ NOTE:This is a test case which uses almost all Evolution fields.
+@@ -182,7 +191,6 @@
+  5;Testovia
+ LABEL;TYPE=HOME:Test Drive 1\nTest Village\, Lower Test County\n12345\nTest
+   Box #1\nTestovia
+-ADR:Test Box #3;;Test Drive 3;Test Megacity;Test County;12347;New Testonia
+ LABEL;TYPE=OTHER:Test Drive 3\nTest Megacity\, Test County\n12347\nTest Box
+   #3\nNew Testonia
+ UID:pas-id-43C0ED3900000001
+@@ -206,7 +214,7 @@
+ 
+ BEGIN:VCARD
+ VERSION:3.0
+-URL:
++URL:http://john.doe.com
+ TITLE:
+ ROLE:
+ X-EVOLUTION-MANAGER:
+@@ -242,7 +250,7 @@
+ 
+ BEGIN:VCARD
+ VERSION:3.0
+-URL:
++URL:http://john.doe.com
+ TITLE:
+ ROLE:
+ X-EVOLUTION-MANAGER:
+@@ -273,7 +281,7 @@
+ 
+ BEGIN:VCARD
+ VERSION:3.0
+-URL:
++URL:http://john.doe.com
+ TITLE:
+ ROLE:
+ X-EVOLUTION-MANAGER:
+@@ -282,7 +290,7 @@
+ X-EVOLUTION-SPOUSE:
+ NOTE:The first name is "First \; special \;".
+ FN:Mr. First \; special \; middle Last
+-N:Last;First \; special \;;middle;Mr.;
++N:Last;First special;middle;Mr.;
+ X-EVOLUTION-FILE-AS:Last\, First \; special \;
+ X-EVOLUTION-BLOG-URL:
+ CALURI:
+@@ -294,7 +302,7 @@
+ 
+ BEGIN:VCARD
+ VERSION:3.0
+-URL:
++URL:http://john.doe.com
+ TITLE:
+ ROLE:
+ X-EVOLUTION-MANAGER:
+@@ -376,53 +384,8 @@
+   & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+   & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+   & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+-  & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & < & <
+ FN:large vcard
+ N:;vcard;;large;
++URL:http://john.doe.com
+ X-EVOLUTION-FILE-AS:large
+ END:VCARD

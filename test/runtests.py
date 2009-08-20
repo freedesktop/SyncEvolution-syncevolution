@@ -775,6 +775,14 @@ googletest = SyncEvolutionTest("google", compile,
                                testPrefix=options.testprefix)
 context.add(googletest)
 
+mobicaltest = SyncEvolutionTest("mobical", compile,
+                            "", options.shell,
+                            [ "Client::Sync" ],
+                            [ "vcard21","ical20","itodo20","text" ],
+                            "CLIENT_TEST_NOCHECK_SYNCMODE=1 CLIENT_TEST_MAX_ITEMSIZE=2048 CLIENT_TEST_SKIP=Client::Sync::vcard21::Retry,Client::Sync::vcard21::Suspend,Client::Sync::vcard21::testRefreshFromClientSync,Client::Sync::vcard21::testSlowSyncSemantic,Client::Sync::vcard21::testRefreshStatus,Client::Sync::vcard21::testDelete,Client::Sync::vcard21::testItemsXML,Client::Sync::vcard21::testOneWayFromServer,Client::Sync::ical20::testRefreshFromClientSync,Client::Sync::ical20::testSlowSyncSemantic,Client::Sync::ical20::testRefreshStatus,Client::Sync::ical20::testDelete,Client::Sync::ical20::testItemsXML,Client::Sync::ical20::testOneWayFromServer,Client::Sync::ical20::testRetry,Client::Sync::vcard21::Suspend,Client::Sync::itodo20::testRefreshFromClientSync,Client::Sync::itodo20::testSlowSyncSemantic,Client::Sync::itodo20::testRefreshStatus,Client::Sync::itodo20::testDelete,Client::Sync::itodo20::testItemsXML,Client::Sync::itodo20::testOneWayFromServer,Client::Sync::itodo20::testRetry,Client::Sync::vcard21::Suspend,Client::Sync::text::testRefreshFromClientSync,Client::Sync::text::testSlowSyncSemantic,Client::Sync::text::testRefreshStatus,Client::Sync::text::testDelete,Client::Sync::text::testItemsXML,Client::Sync::text::testOneWayFromServer,Client::Sync::text::testRetry,Client::Sync::vcard21::Suspend CLIENT_TEST_DELAY=5",
+                            testPrefix=options.testprefix)
+context.add(mobicaltest)
+
 if options.list:
     for action in context.todo:
         print action.name

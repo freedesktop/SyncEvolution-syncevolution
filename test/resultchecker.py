@@ -1,13 +1,37 @@
-import sys
-import os
-import glob
-import datetime
-import popen2
+#!/usr/bin/python
+
+'''
+ Copyright (C) 2009 Intel Corporation
+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) version 3.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ 02110-1301  USA
+'''
+import sys,os,glob,datetime,popen2
+
+""" 
+resultcheck.py: tranverse the test result directory, generate an XML
+based test report.
+"""
 
 space="  "
-def check (resultdir, serverlist,resulturi):
+def check (resultdir, serverlist,resulturi, srcdir):
+    '''Entrypoint, resutldir is the test result directory to be generated,
+    resulturi is the http uri, it will only process corresponding server's
+    test results list in severlist'''
     servers = serverlist.split(",")
-    result = open(datetime.date.today().isoformat() + ".xml","w")
+    result = open("nightly.xml","w")
     result.write('''<?xml version="1.0" encoding="utf-8" ?>\n''')
     result.write('''<nightly-test>\n''')
     indents=[space]
@@ -16,11 +40,13 @@ def check (resultdir, serverlist,resulturi):
     else:
         indents,cont = step1(resultdir+"/output.txt",result,indents,resultdir, resulturi)
         if (cont):
-            step2(resultdir,result,servers,indents)
+            step2(resultdir,result,servers,indents,srcdir)
     result.write('''</nightly-test>\n''')
     result.close()
 
 def step1(input, result, indents, dir, resulturi):
+    '''Step1 of the result checking, collect system information and 
+    check the preparation steps (fetch, compile)'''
     indent =indents[-1]+space
     indents.append(indent)
     result.write(indent+'''<platform-info>\n''')
@@ -55,6 +81,7 @@ def step1(input, result, indents, dir, resulturi):
         fout,fin=popen2.popen2('find `dirname '+input+'` -type d -name *'+tag)
         s = fout.read().rpartition('/')[2].rpartition('\n')[0]
         result.write(' path ="'+s+'">')
+	'''check the result'''
         if(not os.system("grep -q '^"+tag+".* disabled in configuration$' "+input)):
             result.write("skipped")
         elif(os.system ("grep -q '^"+tag+" successful' "+input)):
@@ -76,7 +103,11 @@ def step1(input, result, indents, dir, resulturi):
     indent = indents[-1]
     return (indents, True)
 
-def step2(resultdir, result, servers, indents):
+def step2(resultdir, result, servers, indents, srcdir):
+    '''Step2 of the result checking, for each server listed in
+    servers, tranverse the corresponding result folder, process
+    each log file to decide the status of the testcase'''
+    '''Read the runtime parameter for each server '''
     cmd='sed -n '
     for server in servers:
         cmd+= '-e /^'+server+'/p '
@@ -89,16 +120,25 @@ def step2(resultdir, result, servers, indents):
                 if(t.startswith(':')):
                     t=t.partition(':')[2]
                 params[server]=t
+    '''generate a template which lists all test cases we supply, this helps 
+    generate a comparable table and track potential uncontentional skipping
+    of test cases'''
     templates=[]
-    fout,fin=popen2.popen2("syncevolution-test/build/src/client-test -h |grep 'Client::Sync::vcard21'|grep -v 'Retry' |grep -v 'Suspend' | grep -v 'Resend'")
+    oldpath = os.cwd()
+    os.chdir (srcdir)
+    fout,fin=popen2.popen2("./client-test -h |grep 'Client::Sync::vcard21'|grep -v 'Retry' |grep -v 'Suspend' | grep -v 'Resend'")
+    os.chdir(oldpath)
     for line in fout:
         l = line.partition('Client::Sync::vcard21::')[2].rpartition('\n')[0]
         if(l!=''):
             templates.append(l);
     indent =indents[-1]+space
     indents.append(indent)
+    '''start of testcase results '''
     result.write(indent+'''<client-test>\n''')
     runservers = os.listdir(resultdir)
+    ''' This is a hack, because we have'syncevolution' and 'evolution' as
+    test names, change the name to avoid miss match'''
     if 'evolution' in servers:
         servers.remove('evolution')
         servers.insert(0,'-evolution')
@@ -109,6 +149,7 @@ def step2(resultdir, result, servers, indents):
     syncprinted = False;
     for server in servers:
         matched = False
+	'''Only process servers listed in the input parametr'''
         for rserver in runservers:
             if(rserver.find(server) != -1):
                 matched = True
@@ -120,6 +161,9 @@ def step2(resultdir, result, servers, indents):
                 server='source'
             elif (server == '-synthesis'):
                 server='synthesis'
+	    '''This is another hacking. Local source test is treated the same as 
+	    server test while we want to treat them differenly in the test
+	    report. Put all server test results under anohter tag 'sync' '''
             elif not syncprinted:
                 syncprinted = True
                 result.write(indent+'<sync>\n')
@@ -177,8 +221,9 @@ def step2(resultdir, result, servers, indents):
     result.write(indent+'''</client-test>\n''')
     indents.pop()
     indents = indents[-1]
+
 if(__name__ == "__main__"):
     if (len(sys.argv)!=4):
-        print "usage: python resultchecker.py resultdir servers resulturi"
+        print "usage: python resultchecker.py resultdir servers resulturi srcdir"
     else:
-        check(sys.argv[1], sys.argv[2], sys.argv[3])
+        check(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])

@@ -551,6 +551,17 @@ void WebDAVSource::contactServer()
             } else {
                 candidates.push_front(next.m_path);
             }
+        } catch (const TransportStatusException &ex) {
+            SE_LOG_DEBUG(NULL, NULL, "TransportStatusException: %s", ex.what());
+            if (ex.syncMLStatus() == 404) {
+                // We're actually looking at an authentication error: the path to the calendar has
+                // not been found, so the username was wrong. Let's hijack the error message and
+                // code of the exception by throwing a new one.
+                string descr = StringPrintf("Path not found: %s. Is the username '%s' correct?",
+                                            path.c_str(), username.c_str());
+                int code = 401;
+                SE_THROW_EXCEPTION_STATUS(TransportStatusException, descr, SyncMLStatus(code));
+            }
         } catch (const Exception &ex) {
             if (candidates.empty()) {
                 // nothing left to try, bail out with this error

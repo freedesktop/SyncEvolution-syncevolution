@@ -354,7 +354,7 @@ int Session::sslVerify(void *userdata, int failures, const ne_ssl_certificate *c
 unsigned int Session::options(const std::string &path)
 {
     unsigned int caps;
-    check(ne_options2(m_session, path.c_str(), &caps));
+    check_error(ne_options2(m_session, path.c_str(), &caps));
     return caps;
 }
 #endif // HAVE_LIBNEON_OPTIONS
@@ -394,7 +394,7 @@ void Session::propfindURI(const std::string &path, int depth,
                              StringPrintf("%d status: redirected to %s", code, location.c_str()),
                              code, location);
     } else {
-        if (!check(error, code)) {
+        if (!check_error(error, code)) {
             goto retry;
         }
     }
@@ -470,7 +470,7 @@ void Session::flush()
     }
 }
 
-bool Session::check(int error, int code, const ne_status *status, const string &location)
+bool Session::check_error(int error, int code, const ne_status *status, const string &location)
 {
     flush();
 
@@ -810,7 +810,7 @@ bool Request::run()
         error = ne_xml_dispatch_request(m_req, m_parser->get());
     }
 
-    return check(error);
+    return check_error(error);
 }
 
 int Request::addResultData(void *userdata, const char *buf, size_t len)
@@ -820,9 +820,9 @@ int Request::addResultData(void *userdata, const char *buf, size_t len)
     return 0;
 }
 
-bool Request::check(int error)
+bool Request::check_error(int error)
 {
-    return m_session.check(error, getStatus()->code, getStatus(), getResponseHeader("Location"));
+    return m_session.check_error(error, getStatus()->code, getStatus(), getResponseHeader("Location"));
 }
 
 }

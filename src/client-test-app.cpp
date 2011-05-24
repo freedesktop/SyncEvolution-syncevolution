@@ -537,8 +537,7 @@ private:
         // hard-coded names as used by src/backends/evolution;
         // if some other backend reuses them, it gets the
         // same treatment, which shouldn't cause any harm
-        if (name == "eds_contact" ||
-            name == "eds_contact") {
+        if (name == "eds_contact") {
             basename = "ebook";
         } else if (name == "eds_event" ||
                    name == "text") {

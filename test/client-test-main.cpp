@@ -192,7 +192,10 @@ public:
             FILE *fd = fopen ("____compare.log","r");
             if (fd != NULL) {
                 fclose(fd);
-                system ((string("cat ____compare.log >>")+logfile).c_str());
+                if (system ((string("cat ____compare.log >>")+logfile).c_str()) < 0) {
+                    SE_LOG_WARNING(NULL, NULL, "Unable to append ____compare.log to %s.",
+                                   logfile.c_str());
+                }
             }
         }
 

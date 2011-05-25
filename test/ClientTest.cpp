@@ -3755,7 +3755,9 @@ void SyncTests::postSync(int res, const std::string &logname)
         // give server time to finish writing its logs:
         // more time after a failure
         sleep(res ? 5 : 1);
-        system(StringPrintf("cp -a '%s' '%s/server-log'", log, logname.c_str()).c_str());
+        if (system(StringPrintf("cp -a '%s' '%s/server-log'", log, logname.c_str()).c_str()) < 0) {
+            SE_LOG_WARNING(NULL, NULL, "Unable too copy server log: %s", log);
+        }
         rm_r(log);
     }
 }

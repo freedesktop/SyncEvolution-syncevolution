@@ -353,7 +353,7 @@ class DBusUtil(Timeout):
             os.kill(DBusUtil.pserver.pid, signal.SIGTERM)
         DBusUtil.pserver.communicate()
         serverout = open(syncevolog).read()
-        if DBusUtil.pserver.returncode and pserver.returncode != -15:
+        if DBusUtil.pserver is not None and DBusUtil.pserver.returncode != -15:
             hasfailed = True
         if hasfailed:
             # give D-Bus time to settle down

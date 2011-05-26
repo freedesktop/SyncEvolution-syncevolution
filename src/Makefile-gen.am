@@ -269,7 +269,7 @@ $(TEST_FILES_GENERATED):
 	basefile=$(srcdir)/../test/$(basename $(basename $@)); \
 	( [ ! $@ -ot $$patchfile ] && [ ! $@ -ot $$basefile ] && echo "   $@ up-to-date" ) || \
 	( echo "   generating $@ by applying $$patchfile to $$basefile" && \
-	  (echo '*** foo'; echo '--- bar'; cat $$patchfile) | patch -s -o $@ $$basefile && \
+	  (echo '*** foo'; echo '--- bar'; cat $$patchfile) && [ -s $$patchfile ] | patch -s -o $@ $$basefile && \
           ( if [ $$basefile -ot $$patchfile ]; then \
               touch -r $$patchfile $@; else \
               touch -r $$basefile $@; fi ) \

@@ -96,7 +96,6 @@ class Session : public GDBusCXX::DBusObjectHelper,
     };
 
  private:
-    Server &m_server;
     std::vector<std::string> m_flags;
     const std::string m_sessionID;
     std::string m_peerDeviceID;
@@ -445,7 +444,7 @@ public:
     void setStubConnectionError(const std::string &error) { m_connectionError = error; }
     std::string getStubConnectionError() { return m_connectionError; }
 
-    Server &getServer() { return m_server; }
+    Server &getServer() { return ReadOperations::m_server; }
     std::string getConfigName() { return m_configName; }
     std::string getSessionID() const { return m_sessionID; }
     std::string getPeerDeviceID() const { return m_peerDeviceID; }

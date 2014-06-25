@@ -616,6 +616,9 @@ if test "$enable_dbus_service" != "no"; then
                 # http://code.google.com/p/libphonenumber/
                 AC_LANG(C++)
                 SAVED_CPPFLAGS=$CPPFLAGS
+                if test ! "$PHONENUMBERS_CFLAGS"; then
+                      PHONENUMBERS_CFLAGS=-DI18N_PHONENUMBERS_USE_BOOST
+                fi
                 CPPFLAGS="$CPPFLAGS ${PHONENUMBERS_CFLAGS}"
                 AC_CHECK_HEADERS([phonenumbers/phonenumberutil.h])
                 SAVED_LIBS=$LIBS

@@ -6654,6 +6654,7 @@ private:
 
 void ClientTest::registerTests()
 {
+    freeFactory();
     factory = (void *)new ClientTestFactory(*this);
     CppUnit::TestFactoryRegistry::getRegistry().registerFactory((CppUnit::TestFactory *)factory);
 }
@@ -6665,13 +6666,18 @@ ClientTest::ClientTest(int serverSleepSec, const std::string &serverLog) :
 {
 }
 
-ClientTest::~ClientTest()
+void ClientTest::freeFactory()
 {
     if(factory) {
         CppUnit::TestFactoryRegistry::getRegistry().unregisterFactory((CppUnit::TestFactory *)factory);
         delete (CppUnit::TestFactory *)factory;
-        factory = 0;
+        factory = NULL;
     }
+}
+
+ClientTest::~ClientTest()
+{
+    freeFactory();
 }
 
 void ClientTest::registerCleanup(Cleanup_t cleanup)

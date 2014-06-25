@@ -435,6 +435,7 @@ class ClientTest : private boost::noncopyable {
      * registerTests() and remains valid until the client is deleted
      */
     void *factory;
+    void freeFactory();
 };
 
 /**

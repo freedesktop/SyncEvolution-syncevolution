@@ -1078,6 +1078,7 @@ char *printf_dyn(const char *format, va_list ap)
             size = realsize;
         }
 
+        // cppcheck-suppress nullPointer
         realsize = vsnprintf(buffer, size + 1, format, aq);
         if (realsize == -1) {
             // old-style vnsprintf: exact len unknown, try again with doubled size

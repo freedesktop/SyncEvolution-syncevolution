@@ -487,7 +487,7 @@ int AnyContainsBoost::getFilterMode(const std::vector<LocaleFactory::Filter_t> &
 {
     int mode = ALL;
     for (size_t i = start; i < terms.size(); i++) {
-        const std::string flag = LocaleFactory::getFilterString(terms[i], "any-contains flag");
+        const std::string &flag = LocaleFactory::getFilterString(terms[i], "any-contains flag");
         if (flag == "case-sensitive") {
             mode &= ~CASE_INSENSITIVE;
         } else if (flag == "case-insensitive") {

@@ -798,6 +798,8 @@ double Sleep(double seconds)
             delay.tv_sec = 0;
             delay.tv_usec = 1e5;
             select(0, NULL, NULL, NULL, &delay);
+            // s.getState() will eventually return a different value than it did before.
+            // cppcheck-suppress oppositeInnerCondition
             if (s.getState() != SuspendFlags::NORMAL) {
                 break;
             }

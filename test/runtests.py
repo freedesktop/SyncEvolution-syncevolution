@@ -1317,6 +1317,8 @@ if options.sourcedir:
                                                      # http://sourceforge.net/apps/trac/cppcheck/ticket/5316:
                                                      # Happens with cppcheck 1.61: Analysis failed. If the code is valid then please report this failure.
                                                      "--suppress=cppcheckError:*/localengineds.cpp",
+                                                     # We use inline suppressions for some errors.
+                                                     '--inline-suppr',
                                                      ]))
             # Be more specific about which sources we check. We are not interested in
             # pcre and expat, for example.

@@ -40,6 +40,9 @@ SE_GLIB_TYPE(EBookQuery, e_book_query)
 
 SE_BEGIN_CXX
 
+typedef boost::shared_ptr<EPhoneNumber> EPhoneNumberCXX;
+EPhoneNumberCXX EPhoneNumberCXXNew(EPhoneNumber *number) { return EPhoneNumberCXX(number, e_phone_number_free); }
+
 /**
  * Use higher levels to break ties between strings which are
  * considered equal at the lower levels. For example, "Façade" and
@@ -856,7 +859,25 @@ public:
 };
 
 
-
+SimpleE164 String2E164(const char *tel, const char *country)
+{
+    SimpleE164 e164;
+    GErrorCXX gerror;
+    EPhoneNumberCXX number(EPhoneNumberCXXNew(e_phone_number_from_string(tel, country, gerror)));
+    if (!number) {
+        gerror.throwError(SE_HERE, "parsing number");
+    }
+    EPhoneNumberCountrySource source;
+    e164.m_countryCode = e_phone_number_get_country_code(number.get(), &source);
+    if (source == E_PHONE_NUMBER_COUNTRY_FROM_DEFAULT) {
+        e164.m_countryCode = 0;
+    }
+    PlainGStr national(e_phone_number_get_national_number(number.get()));
+    e164.m_nationalNumber = national.get() ?
+        boost::lexical_cast<SimpleE164::NationalNumber_t>(national.get()) :
+        0;
+    return e164;
+}
 
 /**
  * Search value must be a valid caller ID (with or without a country
@@ -879,30 +900,7 @@ public:
         m_simpleEDSSearch(getenv("SYNCEVOLUTION_PIM_EDS_SUBSTRING") || !e_phone_number_is_supported()),
         m_country(std::use_facet<boost::locale::info>(m_locale).country())
     {
-        i18n::phonenumbers::PhoneNumber number;
-        switch (m_phoneNumberUtil.Parse(tel, m_country, &number)) {
-        case i18n::phonenumbers::PhoneNumberUtil::NO_PARSING_ERROR:
-            // okay
-            break;
-        case i18n::phonenumbers::PhoneNumberUtil::INVALID_COUNTRY_CODE_ERROR:
-            SE_THROW("boost locale factory: invalid country code");
-            break;
-        case i18n::phonenumbers::PhoneNumberUtil::NOT_A_NUMBER:
-            SE_THROW("boost locale factory: not a caller ID: " + tel);
-            break;
-        case i18n::phonenumbers::PhoneNumberUtil::TOO_SHORT_AFTER_IDD:
-            SE_THROW("boost locale factory: too short after IDD: " + tel);
-            break;
-        case i18n::phonenumbers::PhoneNumberUtil::TOO_SHORT_NSN:
-            SE_THROW("boost locale factory: too short NSN: " + tel);
-            break;
-        case i18n::phonenumbers::PhoneNumberUtil::TOO_LONG_NSN:
-            SE_THROW("boost locale factory: too long NSN: " + tel);
-            break;
-        }
-
-        m_number.m_countryCode = number.country_code();
-        m_number.m_nationalNumber = number.national_number();
+        m_number = String2E164(tel.c_str(), m_country.c_str());
     }
 
     virtual bool matches(const IndividualData &data) const
@@ -1249,14 +1247,18 @@ public:
                     continue;
                 }
 
-                i18n::phonenumbers::PhoneNumber number;
-                i18n::phonenumbers::PhoneNumberUtil::ErrorType error =
-                    m_phoneNumberUtil.Parse(value, m_country, &number);
-                if (error == i18n::phonenumbers::PhoneNumberUtil::NO_PARSING_ERROR) {
-                    SimpleE164 e164;
-                    e164.m_countryCode = number.country_code();
-                    e164.m_nationalNumber = number.national_number();
-                    precomputed.m_phoneNumbers.push_back(e164);
+                try {
+                    // This fallback for missing X-EVOLUTION-E164 in EDS still relies
+                    // on libphonenumber support in libebook, so it does not really help
+                    // if EDS was compiled without libphonenumber. It is primarily useful
+                    // for testing (see TestContacts.testLocaledPhone).
+                    SimpleE164 e164 = String2E164(value, m_country.c_str());
+                    if (e164.m_countryCode || e164.m_nationalNumber) {
+                        precomputed.m_phoneNumbers.push_back(e164);
+                    }
+                } catch (const Exception &ex) {
+                    // Silently ignore parse errors.
+                    SE_LOG_DEBUG(NULL, "ignoring unparsable TEL '%s': %s", value, ex.what());
                 }
             }
         }

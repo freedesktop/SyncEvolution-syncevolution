@@ -2550,18 +2550,22 @@ END:VCARD''']):
                       until=lambda: view.haveData(0))
         self.assertEqual(u'Abraham', view.contacts[0]['structured-name']['given'])
 
-        # Find Abraham via 089/7888-99 (not a full caller ID, but at least a valid phone number).
+        # Find Abraham and Benjamin via 089/7888-99 (not a full caller
+        # ID, but at least a valid phone number).  Benjamin matches
+        # despite having +1 as country code because the search term
+        # doesn't have a country code.
         view = ContactsView(self.manager)
         view.search([['phone', '089788899']])
         self.runUntil('"089788899" search results',
                       check=lambda: self.assertEqual([], view.errors),
                       until=lambda: view.quiescentCount > 0)
-        self.assertEqual(1, len(view.contacts))
-        view.read(0, 1)
+        self.assertEqual(2, len(view.contacts))
+        view.read(0, 2)
         self.runUntil('089788899 data',
                       check=lambda: self.assertEqual([], view.errors),
                       until=lambda: view.haveData(0))
         self.assertEqual(u'Abraham', view.contacts[0]['structured-name']['given'])
+        self.assertEqual(u'Benjamin', view.contacts[1]['structured-name']['given'])
 
         # Don't find anyone.
         view = ContactsView(self.manager)
@@ -2749,9 +2753,15 @@ END:VCARD
     # Remove the SYNCEVOLUTION_PIM_EDS_NO_E164=1 part from ENV to test and use EDS.
     @property("ENV", "LANG=en_US.UTF-8 SYNCEVOLUTION_PIM_EDS_NO_E164=1")
     def testLocaledPhone(self):
-         # Parsing of 1234-5 depends on locale: US drops the 1 from 1234
-         # Germany (and other countries) don't. Use that to match (or not match)
-         # a contact.
+         # Parsing of 01164 3 331 6005 depends on locale: in the US, 011 is followed
+         # by a country code, and therefore libphonenumber parses the string as
+         # +64 (for New Zealand) with 3 331 6005 as national number.
+         # Germany (and other countries) don't have that prefix; libphonenumber
+         # ends up returning 116433316005 as national number with +49 as the
+         # default country code. Same example as in phonenumberutil_test.cc.
+         #
+         # We use this difference to determine whether the desired locale was used
+         # for normalizing the phone number.
 
          usingEDS = not 'SYNCEVOLUTION_PIM_EDS_NO_E164=1' in self.getTestProperty("ENV", "")
 
@@ -2766,13 +2776,13 @@ END:VCARD
 VERSION:3.0
 FN:Doe
 N:Doe;;;;
-TEL:12 34-5
+TEL:01164 3 331 6005
 END:VCARD
 '''),)
          names = ('Doe')
          numtestcases = len(testcases)
          view = self.doFilter(testcases,
-                              (([['phone', '+12345']], ('Doe',)),))
+                              (([['phone', '+64 3 331 6005']], ('Doe',)),))
 
          msg = None
          if not usingEDS:

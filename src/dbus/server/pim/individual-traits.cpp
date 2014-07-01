@@ -559,6 +559,8 @@ static void DBus2Addr(GDBusCXX::ExtractArgs &context,
                         new GValueObjectCXX(set.get()));
 }
 
+static FolksAbstractFieldDetails *my_folks_note_field_details_new_wrapper(const gchar *value, GeeMultiMap *parameters) { return FOLKS_ABSTRACT_FIELD_DETAILS(folks_note_field_details_new(value, parameters, NULL)); }
+
 void DBus2PersonaDetails(GDBusCXX::ExtractArgs &context,
                          GDBusCXX::reader_type &iter,
                          PersonaDetails &details)
@@ -647,7 +649,7 @@ void DBus2PersonaDetails(GDBusCXX::ExtractArgs &context,
             DBus2SimpleAbstractField(context, valueIter, details,
                                      FOLKS_TYPE_NOTE_FIELD_DETAILS,
                                      FOLKS_PERSONA_DETAIL_NOTES,
-                                     reinterpret_cast<FolksAbstractFieldDetails *(*)(const gchar *, GeeMultiMap *)>(folks_note_field_details_new));
+                                     my_folks_note_field_details_new_wrapper);
         } else if (key == CONTACT_HASH_ROLES) {
             DBus2Role(context, valueIter, details);
         } else if (key == CONTACT_HASH_GROUPS) {

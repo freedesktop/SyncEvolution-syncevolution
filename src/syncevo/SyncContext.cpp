@@ -2505,7 +2505,7 @@ void SyncContext::getConfigTemplateXML(const string &mode,
     }
 }
 
-void SyncContext::getConfigXML(string &xml, string &configname)
+void SyncContext::getConfigXML(bool isSync, string &xml, string &configname)
 {
     string rules;
     getConfigTemplateXML(m_serverMode ? "server" : "client",
@@ -2975,13 +2975,18 @@ void SyncContext::getConfigXML(string &xml, string &configname)
         substTag(xml, "defaultauth", getClientAuthType());
     }
 
-    // if the hash code is changed, that means the content of the
-    // config has changed, save the new hash and regen the configdate
-    hash = Hash(xml.c_str());
-    if (getHashCode() != hash) {
-        setConfigDate();
-        setHashCode(hash);
-        flush();
+    if (isSync ||
+        !getConfigDate().wasSet()) {
+        // If the hash code of the main sync XML config is changed, that
+        // means the content of the config has changed. Save the new hash
+        // and regen the configdate. Also necessary when no config data
+        // has ever been set.
+        hash = Hash(xml.c_str());
+        if (getHashCode() != hash) {
+            setConfigDate();
+            setHashCode(hash);
+            flush();
+        }
     }
     substTag(xml, "configdate", getConfigDate().c_str());
 }
@@ -3085,10 +3090,10 @@ SyncContext::analyzeSyncMLMessage(const char *data, size_t len,
     return info;
 }
 
-void SyncContext::initEngine(bool logXML)
+void SyncContext::initEngine(bool isSync)
 {
     string xml, configname;
-    getConfigXML(xml, configname);
+    getConfigXML(isSync, xml, configname);
     try {
         m_engine.InitEngineXML(xml.c_str());
     } catch (const BadSynthesisResult &ex) {
@@ -3100,7 +3105,7 @@ void SyncContext::initEngine(bool logXML)
                      xml.c_str());
         throw;
     }
-    if (logXML &&
+    if (isSync &&
         getLogLevel() >= 5) {
         SE_LOG_DEV(NULL, "Full XML configuration:\n%s", xml.c_str());
     }

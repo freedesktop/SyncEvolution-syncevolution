@@ -533,10 +533,11 @@ class SyncContext : public SyncConfig {
      * Calls getConfigTemplateXML(), then fills in
      * sync source XML fragments if necessary.
      *
+     * @param isSync       the XML config will be used for the final engine used for syncing, not just logging
      * @retval xml         is filled with complete Synthesis client config
      * @retval configname  a string describing where the config came from
      */
-    virtual void getConfigXML(string &xml, string &configname);
+    virtual void getConfigXML(bool isSync, string &xml, string &configname);
 
     /**
      * Callback for derived classes: called after initializing the
@@ -646,8 +647,10 @@ class SyncContext : public SyncConfig {
 
     /**
      * generate XML configuration and (re)initialize engine with it
+     *
+     * @param isSync       the XML config will be used for the final engine used for syncing, not just logging
      */
-    void initEngine(bool logXML);
+    void initEngine(bool isSync);
 
     /**
      * the code common to init() and status():

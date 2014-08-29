@@ -757,13 +757,14 @@ class OperationSlotInvoker {
         {
             result_type res = sysync::LOCERR_OK;
             while (first != last) {
+                SyncMLStatus status;
                 try {
-                    *first;
+                    status = *first;
                 } catch (...) {
-                    SyncMLStatus status = Exception::handle(m_source.getDisplayName());
-                    if (res == sysync::LOCERR_OK) {
-                        res = static_cast<result_type>(status);
-                    }
+                    status = Exception::handle(m_source.getDisplayName());
+                }
+                if (res == sysync::LOCERR_OK) {
+                    res = static_cast<result_type>(status);
                 }
                 ++first;
             }
@@ -788,14 +789,15 @@ template<class F> class OperationWrapperSwitch<F, 0, sysync::TSyError>
     /**
      * The pre-signal is invoked with the same parameters as
      * the operations, plus a reference to the sync source as
-     * initial parameter. Slots may throw exceptions, which
+     * initial parameter. Slots may return something other than
+     * STATUS_OK or throw exceptions, which
      * will skip the actual implementation. However, all slots
      * will be invoked exactly once even if one of them throws
      * an exception. The result of the operation then is the
      * error code extracted from the first exception (see
      * OperationSlotInvoker).
      */
-    typedef boost::signals2::signal<void (SyncSource &),
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &),
         OperationSlotInvoker> PreSignal;
 
     /**
@@ -806,11 +808,12 @@ template<class F> class OperationWrapperSwitch<F, 0, sysync::TSyError>
      * operation or the pre-signals, followed by the
      * parameters of the operation.
      *
-     * As with the pre-signal, any slot may throw an exception
+     * As with the pre-signal, any slot may return something other
+     * than STATUS_OK or throw an exception
      * to override the final result, but this won't interrupt
      * calling the rest of the slots.
      */
-    typedef boost::signals2::signal<void (SyncSource &, OperationExecution, sysync::TSyError),
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &, OperationExecution, sysync::TSyError),
         OperationSlotInvoker> PostSignal;
 
     /**
@@ -877,10 +880,10 @@ template<class F> class OperationWrapperSwitch<F, 1, sysync::TSyError>
     typedef sysync::TSyError result_type;
     typedef boost::function<F> OperationType;
     typedef typename boost::function<F>::arg1_type arg1_type;
-    typedef boost::signals2::signal<void (SyncSource &, arg1_type a1),
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &, arg1_type a1),
         OperationSlotInvoker> PreSignal;
-    typedef boost::signals2::signal<void (SyncSource &, OperationExecution, sysync::TSyError,
-                                          arg1_type a1),
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &, OperationExecution, sysync::TSyError,
+                                                  arg1_type a1),
         OperationSlotInvoker> PostSignal;
 
     sysync::TSyError operator () (arg1_type a1) const throw ()
@@ -936,9 +939,9 @@ template<class F, class V> class OperationWrapperSwitch<F, 1, V>
     typedef sysync::TSyError result_type;
     typedef boost::function<F> OperationType;
     typedef typename boost::function<F>::arg1_type arg1_type;
-    typedef boost::signals2::signal<void (SyncSource &, arg1_type a1),
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &, arg1_type a1),
         OperationSlotInvoker> PreSignal;
-    typedef boost::signals2::signal<void (SyncSource &, OperationExecution, sysync::TSyError,
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &, OperationExecution, sysync::TSyError,
                                           arg1_type a1),
         OperationSlotInvoker> PostSignal;
     typedef KeyConverter<arg1_type> Converter;
@@ -1020,10 +1023,10 @@ template<class F> class OperationWrapperSwitch<F, 2, sysync::TSyError>
     typedef boost::function<F> OperationType;
     typedef typename boost::function<F>::arg1_type arg1_type;
     typedef typename boost::function<F>::arg2_type arg2_type;
-    typedef boost::signals2::signal<void (SyncSource &, arg1_type a1, arg2_type a2),
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &, arg1_type a1, arg2_type a2),
         OperationSlotInvoker> PreSignal;
-    typedef boost::signals2::signal<void (SyncSource &, OperationExecution, sysync::TSyError,
-                                          arg1_type a1, arg2_type a2),
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &, OperationExecution, sysync::TSyError,
+                                                  arg1_type a1, arg2_type a2),
         OperationSlotInvoker> PostSignal;
 
     sysync::TSyError operator () (arg1_type a1, arg2_type a2) const throw ()
@@ -1080,10 +1083,10 @@ template<class F, class V> class OperationWrapperSwitch<F, 2, V>
     typedef boost::function<F> OperationType;
     typedef typename boost::function<F>::arg1_type arg1_type;
     typedef typename boost::function<F>::arg2_type arg2_type;
-    typedef boost::signals2::signal<void (SyncSource &, arg1_type a1, arg2_type a2),
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &, arg1_type a1, arg2_type a2),
         OperationSlotInvoker> PreSignal;
-    typedef boost::signals2::signal<void (SyncSource &, OperationExecution, sysync::TSyError,
-                                          arg1_type a1, arg2_type a2),
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &, OperationExecution, sysync::TSyError,
+                                                  arg1_type a1, arg2_type a2),
         OperationSlotInvoker> PostSignal;
     typedef KeyConverter<arg1_type> Converter;
     typedef ContinueOperation<sysync::TSyError (arg1_type, arg2_type)> Continue;
@@ -1165,10 +1168,10 @@ template<class F> class OperationWrapperSwitch<F, 3, sysync::TSyError>
     typedef typename boost::function<F>::arg1_type arg1_type;
     typedef typename boost::function<F>::arg2_type arg2_type;
     typedef typename boost::function<F>::arg3_type arg3_type;
-    typedef boost::signals2::signal<void (SyncSource &, arg1_type a1, arg2_type a2, arg3_type a3),
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &, arg1_type a1, arg2_type a2, arg3_type a3),
         OperationSlotInvoker> PreSignal;
-    typedef boost::signals2::signal<void (SyncSource &, OperationExecution, sysync::TSyError,
-                                          arg1_type a1, arg2_type a2, arg3_type a3),
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &, OperationExecution, sysync::TSyError,
+                                                  arg1_type a1, arg2_type a2, arg3_type a3),
         OperationSlotInvoker> PostSignal;
 
     sysync::TSyError operator () (arg1_type a1, arg2_type a2, arg3_type a3) const throw ()
@@ -1227,10 +1230,10 @@ template<class F, class V> class OperationWrapperSwitch<F, 3, V>
     typedef typename boost::function<F>::arg1_type arg1_type;
     typedef typename boost::function<F>::arg2_type arg2_type;
     typedef typename boost::function<F>::arg3_type arg3_type;
-    typedef boost::signals2::signal<void (SyncSource &, arg1_type a1, arg2_type a2, arg3_type a3),
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &, arg1_type a1, arg2_type a2, arg3_type a3),
         OperationSlotInvoker> PreSignal;
-    typedef boost::signals2::signal<void (SyncSource &, OperationExecution, sysync::TSyError,
-                                          arg1_type a1, arg2_type a2, arg3_type a3),
+    typedef boost::signals2::signal<SyncMLStatus (SyncSource &, OperationExecution, sysync::TSyError,
+                                                  arg1_type a1, arg2_type a2, arg3_type a3),
         OperationSlotInvoker> PostSignal;
     typedef KeyConverter<arg1_type> Converter;
     typedef ContinueOperation<sysync::TSyError (arg1_type, arg2_type, arg3_type)> Continue;
@@ -2894,7 +2897,7 @@ class SyncSourceRevisions : virtual public SyncSourceChanges, virtual public Syn
 
     /** time stamp of latest database modification, for sleepSinceModification() */
     Timespec m_modTimeStamp;
-    void sleepSinceModification();
+    SyncMLStatus sleepSinceModification();
 };
 
 
@@ -2946,9 +2949,9 @@ class SyncSourceLogging : public virtual SyncSourceBase
     std::list<std::string> m_fields;
     std::string m_sep;
 
-    void insertItemAsKey(sysync::KeyH aItemKey, sysync::ItemID newID);
-    void updateItemAsKey(sysync::KeyH aItemKey, sysync::cItemID aID, sysync::ItemID newID);
-    void deleteItem(sysync::cItemID aID);
+    SyncMLStatus insertItemAsKey(sysync::KeyH aItemKey, sysync::ItemID newID);
+    SyncMLStatus updateItemAsKey(sysync::KeyH aItemKey, sysync::cItemID aID, sysync::ItemID newID);
+    SyncMLStatus deleteItem(sysync::cItemID aID);
 };
 
 /**
@@ -2974,7 +2977,7 @@ class SyncSourceAdmin : public virtual SyncSourceBase
     sysync::TSyError insertMapItem(sysync::cMapID mID);
     sysync::TSyError updateMapItem(sysync::cMapID mID);
     sysync::TSyError deleteMapItem(sysync::cMapID mID);
-    void flush();
+    SyncMLStatus flush();
 
     void resetMap();
     void mapid2entry(sysync::cMapID mID, string &key, string &value);

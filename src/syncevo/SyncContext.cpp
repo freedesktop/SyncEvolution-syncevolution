@@ -2295,7 +2295,7 @@ void SyncContext::initSources(SourceList &sourceList)
     }
 }
 
-void SyncContext::startSourceAccess(SyncSource *source)
+SyncMLStatus SyncContext::startSourceAccess(SyncSource *source)
 {
     if(m_firstSourceAccess) {
         syncSuccessStart();
@@ -2315,6 +2315,8 @@ void SyncContext::startSourceAccess(SyncSource *source)
     }
     // database dumping is delayed in both client and server
     m_sourceListPtr->syncPrepare(source->getName());
+
+    return STATUS_OK;
 }
 
 // XML configuration converted to C string constants

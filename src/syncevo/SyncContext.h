@@ -667,7 +667,7 @@ class SyncContext : public SyncConfig {
     /**
      * called via pre-signal of m_startDataRead
      */
-    void startSourceAccess(SyncSource *source);
+    SyncMLStatus startSourceAccess(SyncSource *source);
 
     /**
      * utility function for status() and getChanges():

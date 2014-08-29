@@ -3382,7 +3382,8 @@ void SyncTests::doRestartSync(SyncMode mode)
           [boost::lambda::bind(&SyncSource::getName, &boost::lambda::_1)] =
           boost::lambda::_1),
          boost::lambda::bind(logSyncSourceReport,
-                             &boost::lambda::_1)
+                             &boost::lambda::_1),
+         boost::lambda::constant(STATUS_OK)
          );
 
     // Triggered at the end of each m_endDataWrite.
@@ -3392,11 +3393,12 @@ void SyncTests::doRestartSync(SyncMode mode)
     // interfere with the cycle. Doing real concurrent
     // changes is something for another tests...
     boost::function<SyncSource::Operations::EndDataWrite_t::PostSignal::signature_type> end =
-        boost::bind(boost::function<void ()>(
-                                             boost::lambda::if_then(++boost::lambda::var(startCount) == sources.size(),
-                                                                    (boost::lambda::bind(log, "inserting one item"),
-                                                                     boost::lambda::bind(&SyncTests::allSourcesInsert, this, true)))
-                                             ));
+        boost::bind(boost::function<SyncMLStatus ()>(
+                                                     (boost::lambda::if_then(++boost::lambda::var(startCount) == sources.size(),
+                                                                             (boost::lambda::bind(log, "inserting one item"),
+                                                                              boost::lambda::bind(&SyncTests::allSourcesInsert, this, true))),
+                                                      boost::lambda::constant(STATUS_OK)
+                                                      )));
 
     SyncOptions::Callback_t setup =
         (boost::lambda::if_then(boost::lambda::var(needToConnect),
@@ -3485,11 +3487,13 @@ void SyncTests::doRestartSync(SyncMode mode)
     startCount = 0;
     results.clear();
     end =
-        boost::bind(boost::function<void ()>(
-                                             boost::lambda::if_then(++boost::lambda::var(startCount) == sources.size(),
-                                                                    (boost::lambda::bind(log, "update one item"),
-                                                                     boost::lambda::bind(&SyncTests::allSourcesUpdate, this)))
-                                             ));
+        boost::bind(boost::function<SyncMLStatus ()>(
+                                                     (boost::lambda::if_then(++boost::lambda::var(startCount) == sources.size(),
+                                                                             (boost::lambda::bind(log, "update one item"),
+                                                                              boost::lambda::bind(&SyncTests::allSourcesUpdate, this))),
+                                                      STATUS_OK)
+                                                     ));
+
 
     CT_ASSERT_NO_THROW(doSync(__FILE__, __LINE__,
                               "update",
@@ -3545,11 +3549,12 @@ void SyncTests::doRestartSync(SyncMode mode)
     startCount = 0;
     results.clear();
     end =
-        boost::bind(boost::function<void ()>(
-                                             boost::lambda::if_then(++boost::lambda::var(startCount) == sources.size(),
-                                                                    (boost::lambda::bind(log, "delete one item"),
-                                                                     boost::lambda::bind(&SyncTests::allSourcesDeleteAll, this)))
-                                             ));
+        boost::bind(boost::function<SyncMLStatus ()>(
+                                                     (boost::lambda::if_then(++boost::lambda::var(startCount) == sources.size(),
+                                                                             (boost::lambda::bind(log, "delete one item"),
+                                                                              boost::lambda::bind(&SyncTests::allSourcesDeleteAll, this))),
+                                                      STATUS_OK)
+                                                     ));
 
     CT_ASSERT_NO_THROW(doSync(__FILE__, __LINE__,
                               "delete",
@@ -3738,7 +3743,8 @@ void SyncTests::testManyRestarts()
          ),
          boost::lambda::bind(logSyncSourceReport,
                              &boost::lambda::_1),
-         ++boost::lambda::var(startCount)
+         ++boost::lambda::var(startCount),
+         boost::lambda::constant(STATUS_OK)
          );
 
     SyncOptions::Callback_t setup =

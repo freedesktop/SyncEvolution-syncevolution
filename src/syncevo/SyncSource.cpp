@@ -212,9 +212,10 @@ SyncSourceBase::Operations::Operations(SyncSourceName &source) :
 {
 }
 
-static void BumpCounter(int32_t &counter)
+static SyncMLStatus BumpCounter(int32_t &counter)
 {
     counter++;
+    return STATUS_OK;
 }
 
 SyncSource::SyncSource(const SyncSourceParams &params) :
@@ -1414,7 +1415,7 @@ void SyncSourceRevisions::deleteRevision(ConfigNode &trackingNode,
     trackingNode.removeProperty(luid);
 }
 
-void SyncSourceRevisions::sleepSinceModification()
+SyncMLStatus SyncSourceRevisions::sleepSinceModification()
 {
     Timespec current = Timespec::monotonic();
     // Don't let this get interrupted by user abort.
@@ -1423,6 +1424,7 @@ void SyncSourceRevisions::sleepSinceModification()
         Sleep(m_revisionAccuracySeconds - (current - m_modTimeStamp).duration());
         current = Timespec::monotonic();
     }
+    return STATUS_OK;
 }
 
 void SyncSourceRevisions::databaseModified()
@@ -1482,31 +1484,34 @@ std::string SyncSourceLogging::getDescription(const string &luid)
     return "";
 }
 
-void SyncSourceLogging::insertItemAsKey(sysync::KeyH aItemKey, sysync::ItemID newID)
+SyncMLStatus SyncSourceLogging::insertItemAsKey(sysync::KeyH aItemKey, sysync::ItemID newID)
 {
     std::string description = getDescription(aItemKey);
     SE_LOG_INFO(getDisplayName(),
                 description.empty() ? "%s <%s>" : "%s \"%s\"",
                 "adding",
                 !description.empty() ? description.c_str() : "???");
+    return STATUS_OK;
 }
 
-void SyncSourceLogging::updateItemAsKey(sysync::KeyH aItemKey, sysync::cItemID aID, sysync::ItemID newID)
+SyncMLStatus SyncSourceLogging::updateItemAsKey(sysync::KeyH aItemKey, sysync::cItemID aID, sysync::ItemID newID)
 {
     std::string description = getDescription(aItemKey);
     SE_LOG_INFO(getDisplayName(),
                 description.empty() ? "%s <%s>" : "%s \"%s\"",
                 "updating",
                 !description.empty() ? description.c_str() : aID ? aID->item : "???");
+    return STATUS_OK;
 }
 
-void SyncSourceLogging::deleteItem(sysync::cItemID aID)
+SyncMLStatus SyncSourceLogging::deleteItem(sysync::cItemID aID)
 {
     std::string description = getDescription(aID->item);
     SE_LOG_INFO(getDisplayName(),
                 description.empty() ? "%s <%s>" : "%s \"%s\"",
                 "deleting",
                 !description.empty() ? description.c_str() : aID->item);
+    return STATUS_OK;
 }
 
 void SyncSourceLogging::init(const std::list<std::string> &fields,
@@ -1618,7 +1623,7 @@ sysync::TSyError SyncSourceAdmin::deleteMapItem(sysync::cMapID mID)
     }
 }
 
-void SyncSourceAdmin::flush()
+SyncMLStatus SyncSourceAdmin::flush()
 {
     m_configNode->flush();
     if (m_mappingLoaded) {
@@ -1626,6 +1631,7 @@ void SyncSourceAdmin::flush()
         m_mappingNode->writeProperties(m_mapping);
         m_mappingNode->flush();
     }
+    return STATUS_OK;
 }
 
 void SyncSourceAdmin::resetMap()

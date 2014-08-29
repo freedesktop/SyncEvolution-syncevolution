@@ -1,0 +1,30 @@
+dist_noinst_DATA += src/backends/oauth2/configure-sub.in \
+  src/backends/oauth2/README \
+  $(NONE)
+
+src_backends_oauth2_libs =
+if USE_REFRESH_TOKEN
+src_backends_oauth2_libs += src/backends/oauth2/providerrefreshtoken.la
+endif
+MOSTLYCLEANFILES += $(src_backends_oauth2_libs)
+
+src_backends_oauth2_sources = \
+  src/backends/oauth2/oauth2.h \
+  src/backends/oauth2/oauth2.cpp \
+  $(NONE)
+
+if ENABLE_MODULES
+src_backends_oauth2_backenddir = $(BACKENDS_DIRECTORY)
+src_backends_oauth2_backend_LTLIBRARIES = $(src_backends_oauth2_libs)
+src_backends_oauth2_sources += \
+  src/backends/oauth2/oauth2Register.cpp
+else
+noinst_LTLIBRARIES += $(src_backends_oauth2_libs)
+endif
+
+src_backends_oauth2_providerrefreshtoken_la_SOURCES = $(src_backends_oauth2_sources)
+src_backends_oauth2_providerrefreshtoken_la_LIBADD = $(JSON_LIBS) $(GLIB_LIBS) $(SYNCEVOLUTION_LIBS)
+src_backends_oauth2_providerrefreshtoken_la_LDFLAGS = -module -avoid-version
+src_backends_oauth2_providerrefreshtoken_la_CXXFLAGS = $(JSON_CFLAGS)  $(GLIB_CFLAGS) $(SYNCEVO_WFLAGS) $(SYNCEVOLUTION_CFLAGS)
+src_backends_oauth2_providerrefreshtoken_la_CPPFLAGS = -DUSE_REFRESH_TOKEN -I$(top_srcdir)/test $(BACKEND_CPPFLAGS)
+src_backends_oauth2_providerrefreshtoken_la_DEPENDENCIES = src/syncevo/libsyncevolution.la

@@ -1,0 +1,54 @@
+Google CalDAV/CardDAV via OAuth2
+================================
+
+Setup without HMI
+----------------------------
+
+In case of system without HMI OAuth2 autohirzation can be made using
+refresh token obtained by user in other way (e.g. using gSSO on
+another system with HMI support, described below).
+
+OAuth2 authentication using refresh token is enabled by setting OAuth2
+refresh token as password and setting username to
+"username=refresh_token:{'TokenHost': <'https://accounts.google.com'>, 'TokenPath': <'/o/oauth2/token'>, 'Scope': <'https://www.googleapis.com/auth/carddav'>, 'ClientID': <'678546420751-r51m6emeabphdtdkr3cf5p71slalvsxap0.apps.googleusercontent.com'>, 'ClientSecret': <'qJyR2nz8s3kXzmBwjHH8il28'>}"
+
+Values of ClientId and ClientSecret need to be substituted with
+correct values.
+
+Obtaining OAuth2 refresh token
+==============================
+
+Obtaining refresh token value using gSSO
+----------------------------------------
+
+gSSO identity need to be created using:
+
+gsso-example --create-identity=google-for-syncevolution --identity-method=oauth --identity-realms=google.com
+Identity stored with id 7
+
+After that Google access token can be queried using:
+
+gsso-example --get-google-token=7 --client-id=94523794261470.apps.googleusercontent.com --client-secret=SlVBAcxamM0TBPlvX2c1zbaEY
+Got response: {'Scope': <'https://www.google.com/m8/feeds https://www.googleapis.com/auth/carddav'>, 'AccessToken': <'ya29.dgBz-K-p5jYehyEAAAC5-vhCTOK183D8YxCnv8JJlGKTeV42B6IICDS3pTc1aVl7lTSLHv3OUXfSWEN3ZTA'>, 'TokenParameters': <@a{sv} {}>, 'TokenType': <'Bearer'>, 'RefreshToken': <'1/qXyWpORF_J30KNhZs7kVU8UnHLtt7o-hlud2yViII0A'>, 'Duration': <int64 3600>, 'Timestamp': <int64 1409818710>}
+
+Values of client-id and client-secret need to be substituted with correct values.
+Refresh token is returned in response.
+
+Please note that gsso-example currently does not provide a way to
+define requested scope of token as parameter, in example above its
+source code was modified to use
+  "https://www.google.com/m8/feeds https://www.googleapis.com/auth/carddav"
+scope as default one.
+
+Obtaining refresh token value using GNOME Online Accounts (GOA)
+---------------------------------------------------------------
+
+Default values of Client Id and Client Secret for GOA are:
+  923794261470.apps.googleusercontent.com and
+  SlVBAcxamM0TBPlvX2c1zbEY
+
+After setting up account its refresh token value can be obtained from
+GNOME Keyring, using the seahorse UI. The keyring should contain a
+password for "GOA google credentials for identity account_<account
+id>", which is a JSON string containing a couple of values, including
+refresh token.

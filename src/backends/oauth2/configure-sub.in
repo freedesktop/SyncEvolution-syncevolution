@@ -1,0 +1,25 @@
+PKG_CHECK_MODULES(JSON, [json], HAVE_JSON=yes, HAVE_JSON=no)
+
+def_refresh_token="no"
+
+if test "$ENABLE_LIBSOUP" = "yes" && test "$HAVE_JSON" = "yes"; then
+   def_refresh_token="yes"
+fi
+
+AC_ARG_ENABLE(refresh-token,
+              AS_HELP_STRING([--enable-refresh-token],
+                             [enables or disables support for refresh token single-sign-on system without HMI; default is on if development files are available]),
+              [enable_refresh_token="$enableval"
+               test "$enable_refresh_token" = "yes" || test "$enable_refresh_token" = "no" || AC_MSG_ERROR([invalid value for --enable-refresh-token: $enable_refresh_token])
+               test "$enable_refresh_token" = "no" || test "$HAVE_JSON" = "yes" || test "$ENABLE_LIBSOUP" = "yes"|| AC_MSG_ERROR([required pkg(s) not found that are needed for --enable-refresh-token])],
+              enable_refresh_token="$def_refresh_token")
+if test "$enable_refresh_token" = "yes"; then
+    # link into static executables, similar to a SyncSource
+    SYNCSOURCES="$SYNCSOURCES src/backends/oauth2/providerrefreshtoken.la"
+    if test "$enable_static" = "yes"; then
+       AC_DEFINE(STATIC_REFRESH_TOKEN, 1, [activate gsso])
+    fi
+fi
+
+# conditional compilation in make
+AM_CONDITIONAL([USE_REFRESH_TOKEN], [test "$enable_refresh_token" = "yes"])

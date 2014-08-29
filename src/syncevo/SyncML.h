@@ -296,6 +296,12 @@ enum SyncMLStatus {
      */
     STATUS_MIGRATION_NEEDED = 22005,
 
+    /**
+     * Skip writing of admin data after a sync did not change
+     * anything.
+     */
+    STATUS_SYNC_END_SHORTCUT = 22006,
+
     STATUS_MAX = 0x7FFFFFF
 };
 
@@ -335,6 +341,7 @@ class SyncSourceReport {
     SyncSourceReport() {
         memset(m_stat, 0, sizeof(m_stat));
         m_received = 0;
+        m_sent = 0;
         m_first =
             m_resume = false;
         m_mode = SYNC_NONE;
@@ -426,6 +433,10 @@ class SyncSourceReport {
     void recordTotalNumItemsReceived(int received) { m_received = received; }
     int getTotalNumItemsReceived() const { return m_received; }
 
+    /** counts each sent add/update/delete */
+    void recordTotalNumItemsSent(int sent) { m_sent = sent; }
+    int getTotalNumItemsSent() const { return m_sent; }
+
     /**
      * if not empty, then this was the virtual source which cause the
      * current one to be included in the sync
@@ -439,7 +450,7 @@ class SyncSourceReport {
  private:
     /** storage for getItemStat(): allow access with _MAX as index */
     int m_stat[ITEM_LOCATION_MAX + 1][ITEM_STATE_MAX + 1][ITEM_RESULT_MAX + 1];
-    int m_received;
+    int m_received, m_sent;
 
     SyncMode m_mode;
     int m_restarts;

@@ -150,6 +150,7 @@ void SyncContext::init()
     m_serverAlerted = false;
     m_configNeeded = true;
     m_firstSourceAccess = true;
+    m_quitSync = false;
     m_remoteInitiated = false;
     m_sourceListPtr = NULL;
     m_syncFreeze = SYNC_FREEZE_NONE;
@@ -1961,6 +1962,7 @@ bool SyncContext::displaySourceProgress(SyncSource &source,
             SE_LOG_INFO(NULL, "%s: sent %d",
                         source.getDisplayName().c_str(), event.m_extra1);
         }
+        source.recordTotalNumItemsSent(event.m_extra1);
         break;
     // Not reached, see above.
     case sysync::PEV_ITEMPROCESSED:
@@ -3725,6 +3727,22 @@ bool SyncContext::setFreeze(bool freeze)
     }
 }
 
+SyncMLStatus SyncContext::preSaveAdminData(SyncSource &source)
+{
+    if (!source.getTotalNumItemsReceived() &&
+        !source.getTotalNumItemsSent() &&
+        source.getFinalSyncMode() == SYNC_TWO_WAY &&
+        !source.isFirstSync()) {
+        SE_LOG_DEBUG(NULL, "requesting end of two-way sync with one source early because nothing changed");
+        m_quitSync = true;
+        return STATUS_SYNC_END_SHORTCUT;
+    } else {
+        return STATUS_OK;
+    }
+}
+
+SharedSession *keepSession;
+
 SyncMLStatus SyncContext::doSync()
 {
     boost::shared_ptr<SuspendFlags::Guard> signalGuard;
@@ -3948,6 +3966,22 @@ SyncMLStatus SyncContext::doSync()
         // (not needed for OBEX)
     }
 
+    // Special case local sync when nothing changed: we can be sure
+    // that we can do another sync from exactly the same state (nonce,
+    // source change tracking meta data, etc.) and be successful
+    // again. In such a case we can avoid unnecessary updates of the
+    // .ini and .bfi files.
+    //
+    // To detect this, the server side hooks into the SaveAdminData
+    // operation and replaces it with just returning an "aborted by
+    // user" error.
+    if (m_serverMode &&
+        m_localSync &&
+        m_sourceListPtr->size() == 1) {
+        SyncSource *source = *(*m_sourceListPtr).begin();
+        source->getOperations().m_saveAdminData.getPreSignal().connect(boost::bind(&SyncContext::preSaveAdminData, this, _1));
+    }
+
     // Sync main loop: runs until SessionStep() signals end or error.
     // Exceptions are caught and lead to a call of SessionStep() with
     // parameter STEPCMD_ABORT -> abort session as soon as possible.
@@ -3957,8 +3991,19 @@ SyncMLStatus SyncContext::doSync()
     int requestNum = 0;
     sysync::uInt16 previousStepCmd = stepCmd;
     std::vector<int> numItemsReceived; // source->getTotalNumItemsReceived() for each source, see STEPCMD_SENDDATA
+    m_quitSync = false;
     do {
         try {
+            if (m_quitSync &&
+                !m_serverMode) {
+                SE_LOG_DEBUG(NULL, "ending sync early as requested");
+                // Intentionally prevent destructing the Synthesis
+                // engine and session destruction by keeping a
+                // reference to it around forever, because destroying
+                // the session would cause undesired disk writes.
+                keepSession = new SharedSession(session);
+                break;
+            }
             // check for suspend, if so, modify step command for next step
             // Since the suspend will actually be committed until it is
             // sending out a message, we can safely delay the suspend to
@@ -4199,7 +4244,15 @@ SyncMLStatus SyncContext::doSync()
                 // sent or have it copied into caller's buffer using
                 // ReadSyncMLBuffer(), then send it to the server
                 sendBuffer = m_engine.GetSyncMLBuffer(session, true);
-                m_agent->send(sendBuffer.get(), sendBuffer.size());
+                if (m_serverMode && m_quitSync) {
+                    // When aborting prematurely, skip the server's
+                    // last reply message and instead tell the client
+                    // to quit.
+                    m_agent->setContentType("quitsync");
+                    m_agent->send(NULL, 0);
+                } else {
+                    m_agent->send(sendBuffer.get(), sendBuffer.size());
+                }
                 stepCmd = sysync::STEPCMD_SENTDATA; // we have sent the data
                 break;
             }
@@ -4269,6 +4322,18 @@ SyncMLStatus SyncContext::doSync()
                                                  contentType);
                         }
                         stepCmd = sysync::STEPCMD_GOTDATA; // we have received response data
+                        break;
+                    } else if (contentType == "quitsync") {
+                        SE_LOG_DEBUG(NULL, "server is asking us to quit the sync session");
+                        // Fake "done" events for each active source.
+                        BOOST_FOREACH(SyncSource *source, *m_sourceListPtr) {
+                            if (source->getFinalSyncMode() != SYNC_NONE) {
+                                displaySourceProgress(*source,
+                                                      SyncSourceEvent(sysync::PEV_SYNCEND, 0, 0, 0),
+                                                      true);
+                            }
+                        }
+                        m_quitSync = true;
                         break;
                     } else {
                         SE_LOG_DEBUG(NULL, "unexpected content type '%s' in reply, %d bytes:\n%.*s",

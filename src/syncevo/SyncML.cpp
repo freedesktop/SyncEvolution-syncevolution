@@ -365,6 +365,10 @@ std::string Status2String(SyncMLStatus status)
         error = "proceeding would make backward incompatible changes, aborted";
         break;
 
+    case STATUS_SYNC_END_SHORTCUT:
+        error = "intentionally skip sync session shutdown";
+        break;
+
     case sysync::LOCERR_BADPROTO:
         error = "bad or unknown protocol";
         break;

@@ -121,6 +121,9 @@ class SyncContext : public SyncConfig {
      */
     SharedSession m_session;
 
+    /** Set to true in displaySourceProgress() when doSync() is expected to stop the sync early. */
+    bool m_quitSync;
+
     /**
      * installs session in SyncContext and removes it again
      * when going out of scope
@@ -663,6 +666,11 @@ class SyncContext : public SyncConfig {
      * @param config    config name of peer
      */
     void initLocalSync(const string &config);
+
+    /**
+     * called via pre-signal of m_saveAdminData
+     */
+    SyncMLStatus preSaveAdminData(SyncSource &source);
 
     /**
      * called via pre-signal of m_startDataRead

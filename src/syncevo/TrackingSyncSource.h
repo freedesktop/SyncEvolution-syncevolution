@@ -279,6 +279,7 @@ class TrackingSyncSource : public TestingSyncSource,
  private:
     InsertItemResult doInsertItem(const std::string &luid, const std::string &item, bool raw);
     InsertItemResult continueInsertItem(const boost::function<InsertItemResult ()> &check, const std::string &luid);
+    void resetDatabaseRevision();
 };
 
 

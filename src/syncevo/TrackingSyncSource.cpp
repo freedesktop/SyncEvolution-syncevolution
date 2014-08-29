@@ -99,11 +99,6 @@ void TrackingSyncSource::beginSync(const std::string &lastToken, const std::stri
                 SE_LOG_DEBUG(getDisplayName(), "revisions match, no item changes");
                 mode = CHANGES_NONE;
             }
-
-            // Reset old revision. If anything goes wrong, then we
-            // don't want to rely on a possibly incorrect optimization.
-            m_metaNode->setProperty("databaseRevision", "");
-            m_metaNode->flush();
         }
     }
     if (mode == CHANGES_FULL) {
@@ -145,6 +140,7 @@ std::string TrackingSyncSource::endSync(bool success)
 
 TrackingSyncSource::InsertItemResult TrackingSyncSource::continueInsertItem(const boost::function<InsertItemResult ()> &check, const std::string &luid)
 {
+    resetDatabaseRevision();
     InsertItemResult res = check();
     if (res.m_state == ITEM_AGAIN) {
         // Delay updating the revision.
@@ -192,8 +188,19 @@ void TrackingSyncSource::readItemRaw(const std::string &luid, std::string &item)
     readItem(luid, item, true);
 }
 
+void TrackingSyncSource::resetDatabaseRevision()
+{
+    if (m_metaNode) {
+        // Reset old revision. If anything goes wrong, then we
+        // don't want to rely on a possibly incorrect optimization.
+        m_metaNode->setProperty("databaseRevision", "");
+        m_metaNode->flush();
+    }
+}
+
 void TrackingSyncSource::deleteItem(const std::string &luid)
 {
+    resetDatabaseRevision();
     removeItem(luid);
     deleteRevision(*m_trackingNode, luid);
 }

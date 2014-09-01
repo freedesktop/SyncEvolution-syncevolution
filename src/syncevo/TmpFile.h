@@ -65,6 +65,12 @@ class TmpFile
         void create(Type type = FILE);
 
         /**
+         * Create a temporary file with an already existing
+         * file descriptor. New instance owns the FD.
+         */
+        void create(int fd);
+
+        /**
          * Map a view of file and optionally return pointer and/or size.
          *
          * File should already have a correct size.

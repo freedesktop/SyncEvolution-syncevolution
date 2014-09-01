@@ -103,6 +103,15 @@ void TmpFile::create(Type type)
     }
 }
 
+void TmpFile::create(int fd)
+{
+    if (m_fd >= 0 || m_mapptr || m_mapsize) {
+        throw TmpFileException("TmpFile::create(): busy");
+    }
+    m_fd = fd;
+    m_filename.clear();
+    m_type = FILE;
+}
 
 void TmpFile::map(void **mapptr, size_t *mapsize)
 {
@@ -117,7 +126,13 @@ void TmpFile::map(void **mapptr, size_t *mapsize)
     if (fstat(m_fd, &sb) != 0) {
         throw TmpFileException("TmpFile::map(): fstat()");
     }
-    m_mapptr = mmap(NULL, sb.st_size, PROT_READ|PROT_WRITE, MAP_PRIVATE,
+    // TODO (?): make this configurable.
+    //
+    // At the moment, SyncEvolution either only reads from a file
+    // (and thus MAP_SHARED vs. MAP_PRIVATE doesn't matter, and
+    // PROT_WRITE doesn't hurt), or writes for some other process
+    // to read the data (hence needing MAP_SHARED).
+    m_mapptr = mmap(NULL, sb.st_size, PROT_READ|PROT_WRITE, MAP_SHARED,
                     m_fd, 0);
     if (m_mapptr == MAP_FAILED) {
         m_mapptr = 0;

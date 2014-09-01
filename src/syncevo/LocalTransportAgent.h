@@ -32,6 +32,7 @@
 #include "gdbus-cxx-bridge.h"
 #include <string>
 #include <stdint.h>
+#include <pcrecpp.h>
 
 #include <syncevo/declarations.h>
 SE_BEGIN_CXX
@@ -114,7 +115,7 @@ class LocalTransportAgent : public TransportAgent
     boost::shared_ptr<ForkExecParent> m_forkexec;
     std::string m_contentType;
     std::string m_replyContentType;
-    std::string m_replyMsg;
+    pcrecpp::StringPiece m_replyMsg;
 
     /**
      * provides the D-Bus API expected by the forked process:
@@ -143,7 +144,7 @@ class LocalTransportAgent : public TransportAgent
                      const boost::shared_ptr< GDBusCXX::Result1<const std::string &> > &reply);
     void storeSyncReport(const std::string &report);
     void storeReplyMsg(const std::string &contentType,
-                       const GDBusCXX::DBusArray<uint8_t> &reply,
+                       size_t offset, size_t len,
                        const std::string &error);
 
     /**

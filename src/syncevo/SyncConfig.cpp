@@ -50,6 +50,7 @@
 SE_BEGIN_CXX
 
 const char *const SourceAdminDataName = "adminData";
+const char *const SyncMaxMsgSize = "maxMsgSize";
 
 int ConfigVersions[CONFIG_LEVEL_MAX][CONFIG_VERSION_MAX] =
 {
@@ -1507,7 +1508,7 @@ static StringConfigProperty syncPropClientAuthType("clientAuthType",
                                                    Values() +
                                                    (Aliases("basic") + "syncml:auth-basic") +
                                                    (Aliases("md5") + "syncml:auth-md5" + ""));
-static ULongConfigProperty syncPropMaxMsgSize("maxMsgSize",
+static ULongConfigProperty syncPropMaxMsgSize(SyncMaxMsgSize,
                                               "The maximum size of each message can be set (maxMsgSize) and the\n"
                                               "peer can be told to never sent items larger than a certain\n"
                                               "threshold (maxObjSize). Presumably the peer has to truncate or\n"

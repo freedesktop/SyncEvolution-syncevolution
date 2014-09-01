@@ -29,6 +29,7 @@
 #include <syncevo/LogRedirect.h>
 #include <syncevo/LogDLT.h>
 #include <syncevo/BoostHelper.h>
+#include <syncevo/TmpFile.h>
 
 #include <synthesis/syerror.h>
 
@@ -43,6 +44,126 @@
 
 #include <syncevo/declarations.h>
 SE_BEGIN_CXX
+
+//
+// It would be better to make these officially part of the libsynthesis API...
+//
+extern "C" {
+    extern void  *(*smlLibMalloc)(size_t size);
+    extern void  (*smlLibFree)(void *ptr);
+}
+
+/**
+ * This class intercepts libsmltk memory functions and redirects the
+ * buffer allocated for SyncML messages into shared memory.
+ *
+ * This works because:
+ * - each side allocates exactly one such buffer
+ * - the size of the buffer is twice the configured maximum message size
+ * - we don't need to clean up or worry about the singleton because
+ *   each process in SyncEvolution only runs one sync session
+ */
+class SMLTKSharedMemory
+{
+public:
+    static SMLTKSharedMemory &singleton()
+    {
+        static SMLTKSharedMemory instance;
+        return instance;
+    }
+
+    void initParent(size_t msgSize)
+    {
+        m_messageBufferSize = msgSize * 2;
+        prepareBuffer(m_localBuffer, m_messageBufferSize);
+        prepareBuffer(m_remoteBuffer, m_messageBufferSize);
+        setenv("SYNCEVOLUTION_LOCAL_SYNC_PARENT_FD", StringPrintf("%d", m_localBuffer.getFD()).c_str(), true);
+        setenv("SYNCEVOLUTION_LOCAL_SYNC_CHILD_FD", StringPrintf("%d", m_remoteBuffer.getFD()).c_str(), true);
+        m_remoteBuffer.map(NULL, NULL);
+    }
+
+    void initChild(size_t msgSize)
+    {
+        m_messageBufferSize = msgSize * 2;
+        m_remoteBuffer.create(atoi(getEnv("SYNCEVOLUTION_LOCAL_SYNC_PARENT_FD", "-1")));
+        m_localBuffer.create(atoi(getEnv("SYNCEVOLUTION_LOCAL_SYNC_CHILD_FD", "-1")));
+        m_remoteBuffer.map(NULL, NULL);
+        pcrecpp::StringPiece remote = m_remoteBuffer.stringPiece();
+        if ((size_t)remote.size() != m_messageBufferSize) {
+            SE_THROW(StringPrintf("local and remote side do not agree on shared buffer size: %ld != %ld",
+                                  (long)m_messageBufferSize, (long)remote.size()));
+        }
+    }
+
+    pcrecpp::StringPiece getLocalBuffer() { return m_localBuffer.stringPiece(); }
+    pcrecpp::StringPiece getRemoteBuffer() { return m_remoteBuffer.stringPiece(); }
+
+    size_t toLocalOffset(const char *data, size_t len)
+    {
+        if (!len) {
+            return 0;
+        }
+
+        pcrecpp::StringPiece localBuffer = getLocalBuffer();
+        if (data < localBuffer.data() ||
+            data + len > localBuffer.data() + localBuffer.size()) {
+            SE_THROW("unexpected send buffer");
+        }
+        return data - localBuffer.data();
+    }
+
+private:
+    SMLTKSharedMemory()
+    {
+        smlLibMalloc = sshalloc;
+        smlLibFree = sshfree;
+    }
+
+    size_t m_messageBufferSize;
+    void *m_messageBuffer;
+    TmpFile m_localBuffer, m_remoteBuffer;
+
+    static void *sshalloc(size_t size) { return singleton().shalloc(size); }
+    void *shalloc(size_t size)
+    {
+        if (size == m_messageBufferSize) {
+            try {
+                m_localBuffer.map(&m_messageBuffer, NULL);
+                return m_messageBuffer;
+            } catch (...) {
+                Exception::handle();
+                return NULL;
+            }
+        } else {
+            return malloc(size);
+        }
+    }
+
+    static void sshfree(void *ptr) { return singleton().shfree(ptr); }
+    void shfree(void *ptr)
+    {
+        if (ptr == m_messageBuffer) {
+            m_messageBuffer = NULL;
+        } else {
+            free(ptr);
+        }
+    }
+
+    void prepareBuffer(TmpFile &tmpfile, size_t bufferSize)
+    {
+        // Reset buffer, in case it was used before (happens in client-test).
+        tmpfile.close();
+        tmpfile.unmap();
+
+        tmpfile.create();
+        if (ftruncate(tmpfile.getFD(), bufferSize)) {
+            SE_THROW(StringPrintf("resizing message buffer file to %ld bytes failed: %s",
+                                  (long)bufferSize, strerror(errno)));
+        }
+        tmpfile.remove();
+    }
+};
+
 
 class NoopAgentDestructor
 {
@@ -60,6 +181,7 @@ LocalTransportAgent::LocalTransportAgent(SyncContext *server,
            GMainLoopCXX(static_cast<GMainLoop *>(loop), ADD_REF) :
            GMainLoopCXX(g_main_loop_new(NULL, false), TRANSFER_REF))
 {
+    SMLTKSharedMemory::singleton().initParent(server->getMaxMsgSize());
 }
 
 boost::shared_ptr<LocalTransportAgent> LocalTransportAgent::create(SyncContext *server,
@@ -159,7 +281,7 @@ class LocalTransportChild : public GDBusCXX::DBusRemoteObject
      */
     typedef std::map<std::string, StringPair> ActiveSources_t;
     /** use this to send a message back from child to parent */
-    typedef boost::shared_ptr< GDBusCXX::Result2< std::string, GDBusCXX::DBusArray<uint8_t> > > ReplyPtr;
+    typedef boost::shared_ptr< GDBusCXX::Result3< std::string, size_t, size_t > > ReplyPtr;
 
     /** log output with level and message; process name will be added by parent */
     GDBusCXX::SignalWatch2<string, string> m_logOutput;
@@ -167,9 +289,9 @@ class LocalTransportChild : public GDBusCXX::DBusRemoteObject
     /** LocalTransportAgentChild::setFreeze() */
     GDBusCXX::DBusClientCall0 m_setFreeze;
     /** LocalTransportAgentChild::startSync() */
-    GDBusCXX::DBusClientCall2<std::string, GDBusCXX::DBusArray<uint8_t> > m_startSync;
+    GDBusCXX::DBusClientCall3<std::string, size_t, size_t > m_startSync;
     /** LocalTransportAgentChild::sendMsg() */
-    GDBusCXX::DBusClientCall2<std::string, GDBusCXX::DBusArray<uint8_t> > m_sendMsg;
+    GDBusCXX::DBusClientCall3<std::string, size_t, size_t > m_sendMsg;
 };
 
 void LocalTransportAgent::logChildOutput(const std::string &level, const std::string &message)
@@ -207,6 +329,16 @@ void LocalTransportAgent::onChildConnect(const GDBusCXX::DBusConnectionPtr &conn
             sources[sourceName] = std::make_pair(targetName, sync);
         }
     }
+
+    // Some sync properties come from the originating sync config.
+    // They might have been set temporarily, so we have to read them
+    // here. We must ensure that this value is used, even if unset.
+    FullProps props = m_server->getConfigProps();
+    props[""].m_syncProps[SyncMaxMsgSize] = StringPrintf("%lu", m_server->getMaxMsgSize().get());
+    // TODO: also handle "preventSlowSync" like this. Currently it must
+    // be set in the target sync config. For backward compatibility we
+    // must disable slow sync when it is set on either side.
+
     m_child->m_startSync.start(m_clientConfig,
                                StringPair(m_server->getConfigName(),
                                           m_server->isEphemeral() ?
@@ -216,9 +348,9 @@ void LocalTransportAgent::onChildConnect(const GDBusCXX::DBusConnectionPtr &conn
                                m_server->getDoLogging(),
                                std::make_pair(m_server->getSyncUser(),
                                               m_server->getSyncPassword()),
-                               m_server->getConfigProps(),
+                               props,
                                sources,
-                               boost::bind(&LocalTransportAgent::storeReplyMsg, m_self, _1, _2, _3));
+                               boost::bind(&LocalTransportAgent::storeReplyMsg, m_self, _1, _2, _3, _4));
 }
 
 void LocalTransportAgent::onFailure(const std::string &error)
@@ -347,9 +479,10 @@ void LocalTransportAgent::setFreeze(bool freeze)
 void LocalTransportAgent::send(const char *data, size_t len)
 {
     if (m_child) {
+        size_t offset = SMLTKSharedMemory::singleton().toLocalOffset(data, len);
         m_status = ACTIVE;
-        m_child->m_sendMsg.start(m_contentType, GDBusCXX::makeDBusArray(len, (uint8_t *)(data)),
-                                 boost::bind(&LocalTransportAgent::storeReplyMsg, m_self, _1, _2, _3));
+        m_child->m_sendMsg.start(m_contentType, offset, len,
+                                 boost::bind(&LocalTransportAgent::storeReplyMsg, m_self, _1, _2, _3, _4));
     } else {
         m_status = FAILED;
         SE_THROW_EXCEPTION(TransportException,
@@ -358,11 +491,11 @@ void LocalTransportAgent::send(const char *data, size_t len)
 }
 
 void LocalTransportAgent::storeReplyMsg(const std::string &contentType,
-                                        const GDBusCXX::DBusArray<uint8_t> &reply,
+                                        size_t offset, size_t len,
                                         const std::string &error)
 {
-    m_replyMsg.assign(reinterpret_cast<const char *>(reply.second),
-                      reply.first);
+    pcrecpp::StringPiece remoteBuffer = SMLTKSharedMemory::singleton().getRemoteBuffer();
+    m_replyMsg.set(remoteBuffer.data() + offset, len);
     m_replyContentType = contentType;
     if (error.empty()) {
         m_status = GOT_REPLY;
@@ -438,7 +571,7 @@ void LocalTransportAgent::getReply(const char *&data, size_t &len, std::string &
         SE_THROW("internal error, no reply available");
     }
     contentType = m_replyContentType;
-    data = m_replyMsg.c_str();
+    data = m_replyMsg.data();
     len = m_replyMsg.size();
 }
 
@@ -649,9 +782,9 @@ class LocalTransportAgentChild : public TransportAgent
     std::string m_contentType;
 
     /**
-     * message from parent
+     * message from parent in the shared memory buffer
      */
-    std::string m_message;
+    pcrecpp::StringPiece m_message;
 
     /**
      * content type of message from parent
@@ -789,6 +922,9 @@ class LocalTransportAgentChild : public TransportAgent
             m_client->setConfigFilter(false, sourceName, serverConfigProps.createSourceFilter(m_client->getConfigName(), sourceName));
         }
 
+        // With the config in place, initialize message passing.
+        SMLTKSharedMemory::singleton().initChild(m_client->getMaxMsgSize());
+
         // Copy non-empty credentials from main config, because
         // that is where the GUI knows how to store them. A better
         // solution would be to require that credentials are in the
@@ -882,15 +1018,15 @@ class LocalTransportAgentChild : public TransportAgent
     }
 
     void sendMsg(const std::string &contentType,
-                 const GDBusCXX::DBusArray<uint8_t> &data,
+                 size_t offset, size_t len,
                  const LocalTransportChild::ReplyPtr &reply)
     {
-        SE_LOG_DEBUG(NULL, "child got message of %ld bytes", (long)data.first);
+        SE_LOG_DEBUG(NULL, "child got message of %ld bytes", (long)len);
         setMsgToParent(LocalTransportChild::ReplyPtr(), "sendMsg() was called");
         if (m_status == ACTIVE) {
             m_msgToParent = reply;
-            m_message.assign(reinterpret_cast<const char *>(data.second),
-                             data.first);
+            pcrecpp::StringPiece remoteBuffer = SMLTKSharedMemory::singleton().getRemoteBuffer();
+            m_message.set(remoteBuffer.data() + offset, len);
             m_messageType = contentType;
             m_status = GOT_REPLY;
         } else {
@@ -1050,7 +1186,7 @@ public:
             // Must send non-zero message, empty messages cause an
             // error during D-Bus message decoding on the receiving
             // side. Content doesn't matter, ignored by parent.
-            m_msgToParent->done("shutdown-message", GDBusCXX::makeDBusArray(1, (uint8_t *)""));
+            m_msgToParent->done("shutdown-message", (size_t)0, (size_t)0);
             m_msgToParent.reset();
         }
         if (m_status != FAILED) {
@@ -1071,8 +1207,9 @@ public:
     {
         SE_LOG_DEBUG(NULL, "child local transport sending %ld bytes", (long)len);
         if (m_msgToParent) {
+            size_t offset = SMLTKSharedMemory::singleton().toLocalOffset(data, len);
             m_status = ACTIVE;
-            m_msgToParent->done(m_contentType, GDBusCXX::makeDBusArray(len, (uint8_t *)(data)));
+            m_msgToParent->done(m_contentType, offset, len);
             m_msgToParent.reset();
         } else {
             m_status = FAILED;
@@ -1132,7 +1269,7 @@ public:
         if (m_status != GOT_REPLY) {
             SE_THROW("getReply() called in child when no reply available");
         }
-        data = m_message.c_str();
+        data = m_message.data();
         len = m_message.size();
         contentType = m_messageType;
     }

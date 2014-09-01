@@ -136,6 +136,9 @@ struct ConfigPasswordKey;
 /** name of the per-source admin data property */
 extern const char *const SourceAdminDataName;
 
+/** name of the sync property for set/getMaxMsgSize */
+extern const char *const SyncMaxMsgSize;
+
 struct UserIdentity {
     /**
      * Defines how information about the user and the

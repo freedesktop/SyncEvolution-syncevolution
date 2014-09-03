@@ -60,7 +60,7 @@ if testFolder not in sys.path:
 # Rely on the glib/gobject compatibility import code in test-dbus.py.
 from testdbus import glib, gobject
 
-from testdbus import DBusUtil, timeout, Timeout, property, usingValgrind, xdg_root, bus, logging, NullLogging, loop
+from testdbus import DBusUtil, timeout, Timeout, property, usingValgrind, xdg_root, bus, logging, NullLogging, loop, listall
 import testdbus
 
 def timeFunction(func, *args1, **args2):
@@ -929,22 +929,6 @@ XDG root.
         # Clear data in the phone.
         self.configurePhone(phone, uid, contacts)
         self.syncPhone(phone, uid)
-
-        def listall(dirs, exclude=[]):
-             result = {}
-             def append(dirname, entry):
-                  fullname = os.path.join(dirname, entry)
-                  for pattern in exclude:
-                       if re.match(pattern, fullname):
-                            return
-                  result[fullname] = os.stat(fullname).st_mtime
-             for dir in dirs:
-                  for dirname, dirnames, filenames in os.walk(dir):
-                       for subdirname in dirnames:
-                            append(dirname, subdirname)
-                       for filename in filenames:
-                            append(dirname, filename)
-             return result
 
         def listsyncevo(exclude=[]):
              '''find all files owned by SyncEvolution, excluding the logs for syncing with a real phone'''

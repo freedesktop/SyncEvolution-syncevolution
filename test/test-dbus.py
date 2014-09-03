@@ -38,6 +38,7 @@ import inspect
 import gzip
 import httplib
 import socket
+import stat
 
 import dbus
 from dbus.mainloop.glib import DBusGMainLoop
@@ -103,6 +104,32 @@ def which(program):
             return os.path.abspath(exeFile)
 
     return None
+
+def listall(dirs, exclude=[], includedata=False):
+    '''returns list of all dirs and files in the given dirs, excluding entries matching one
+of the regular expressions'''
+
+    result = {}
+    def append(dirname, entry):
+        fullname = os.path.join(dirname, entry)
+        for pattern in exclude:
+            if re.match(pattern, fullname):
+                return
+        s = os.stat(fullname)
+        if includedata and stat.S_ISREG(s.st_mode):
+            data = open(fullname).read()
+            if filter(lambda x: x not in string.printable, data):
+                data = ' '.join(['%02x'%ord(x) for x in data])
+            result[fullname] = (s.st_mtime, data)
+        else:
+            result[fullname] = s.st_mtime
+    for dir in dirs:
+        for dirname, dirnames, filenames in os.walk(dir):
+            for subdirname in dirnames:
+                append(dirname, subdirname)
+            for filename in filenames:
+                append(dirname, filename)
+    return result
 
 def GrepNotifications(dbuslog):
     '''finds all Notify calls and returns their parameters as list of line lists'''
@@ -8383,6 +8410,7 @@ FN:John Doe
 N:Doe;John
 END:VCARD''')
         output.close()
+        numSyncs = 0
 
         out, err, code = self.runCmdline(["--sync", "slow", "server"],
                                          sessionFlags=[],
@@ -8472,7 +8500,8 @@ no changes
 (.*\n)+status: running;waiting, 0, \{addressbook: \(slow, running, 0\)\}
 (.*\n)*progress: 100, \{addressbook: \(sending, -1, -1, 1, 0, -1, -1\)\}
 (.*\n)*status: done, .*''')
-        self.checkSync(numReports=1)
+        numSyncs = numSyncs + 1
+        self.checkSync(numReports=numSyncs)
 
         # check result (should be unchanged)
         input = open(item, "r")
@@ -8551,7 +8580,148 @@ no changes
 (.*\n)+status: running;waiting, 0, \{addressbook: \(two-way, running, 0\)\}
 (.*\n)*progress: 100, \{addressbook: \(, -1, -1, -1, -1, -1, -1\)\}
 (.*\n)*status: done, .*''')
-        self.checkSync(numReports=2)
+        numSyncs = numSyncs + 1
+        self.checkSync(numReports=numSyncs)
+
+        # Now once more in the same mode with dumping data disabled.
+        # This should trigger the "quit sync early, avoid data write"
+        # optimization.
+        def listxdg():
+            return listall([xdg_root],
+                           exclude=[xdg_root + '/cache/syncevolution($|/.*)'],
+                           includedata=True)
+        before = listxdg()
+        out, err, code = self.runCmdline(["--run", "printChanges=0", "dumpData=0", "server"],
+                                         sessionFlags=[],
+                                         preserveOutputOrder=True)
+        self.assertEqual(err, None)
+        self.assertEqual(0, code)
+        out = self.stripSyncTime(out)
+        self.assertEqualDiff('''[INFO remote@client] target side of local sync ready
+[INFO remote@client] @client/addressbook: starting normal sync, two-way (peer is server)
+[INFO] @default/addressbook: starting normal sync, two-way (peer is client)
+[INFO] @default/addressbook: started
+[INFO remote@client] @client/addressbook: started
+[INFO] @default/addressbook: normal sync done successfully
+[INFO remote@client] @client/addressbook: normal sync done successfully
+
+Synchronization successful.
+
+Changes applied during synchronization (remote@client):
++---------------|-----------------------|-----------------------|-CON-+
+|               |        @client        |       @default        | FLI |
+|        Source | NEW | MOD | DEL | ERR | NEW | MOD | DEL | ERR | CTS |
++---------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+|   addressbook |  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0  |
+|   two-way, 0 KB sent by client, 0 KB received                       |
++---------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+| start xxx, duration a:bcmin |
+|               synchronization completed successfully                |
++---------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+
+Synchronization successful.
+
+Changes applied during synchronization:
++---------------|-----------------------|-----------------------|-CON-+
+|               |       @default        |        @client        | FLI |
+|        Source | NEW | MOD | DEL | ERR | NEW | MOD | DEL | ERR | CTS |
++---------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+|   addressbook |  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0  |
+|   two-way, 0 KB sent by client, 0 KB received                       |
++---------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+| start xxx, duration a:bcmin |
+|               synchronization completed successfully                |
++---------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+''', out)
+        self.collectEvents()
+        self.assertRegexpMatches(self.prettyPrintEvents(),
+                                 r'''status: idle, .*
+(.*\n)+status: running;waiting, 0, \{addressbook: \(two-way, running, 0\)\}
+(.*\n)*progress: 100, \{addressbook: \(, -1, -1, -1, -1, -1, -1\)\}
+(.*\n)*status: done, .*''')
+        numSyncs = numSyncs + 1
+        self.checkSync(numReports=numSyncs)
+        after = listxdg()
+        self.assertEqual(before, after)
+
+        # Now once more in the same mode with data comparison.
+        before = listxdg()
+        out, err, code = self.runCmdline(["server"],
+                                         sessionFlags=[],
+                                         preserveOutputOrder=True)
+        self.assertEqual(err, None)
+        self.assertEqual(0, code)
+        out = self.stripSyncTime(out)
+        self.assertEqualDiff('''[INFO remote@client] target side of local sync ready
+[INFO remote@client] @client/addressbook: starting normal sync, two-way (peer is server)
+[INFO remote@client] creating complete data backup of datastore addressbook before sync (enabled with dumpData and needed for printChanges)
+@client data changes to be applied during synchronization:
+*** @client/addressbook ***
+Comparison was impossible.
+
+[INFO] @default/addressbook: starting normal sync, two-way (peer is client)
+[INFO] creating complete data backup of datastore addressbook before sync (enabled with dumpData and needed for printChanges)
+@default data changes to be applied during synchronization:
+*** @default/addressbook ***
+Comparison was impossible.
+
+[INFO] @default/addressbook: started
+[INFO remote@client] @client/addressbook: started
+[INFO] @default/addressbook: normal sync done successfully
+[INFO remote@client] @client/addressbook: normal sync done successfully
+[INFO remote@client] creating complete data backup after sync (enabled with dumpData and needed for printChanges)
+
+Synchronization successful.
+
+Changes applied during synchronization (remote@client):
++---------------|-----------------------|-----------------------|-CON-+
+|               |        @client        |       @default        | FLI |
+|        Source | NEW | MOD | DEL | ERR | NEW | MOD | DEL | ERR | CTS |
++---------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+|   addressbook |  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0  |
+|   two-way, 0 KB sent by client, 0 KB received                       |
+|   item(s) in database backup: 1 before sync, 1 after it             |
++---------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+| start xxx, duration a:bcmin |
+|               synchronization completed successfully                |
++---------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+
+Data modified @client during synchronization:
+*** @client/addressbook ***
+no changes
+
+[INFO] creating complete data backup after sync (enabled with dumpData and needed for printChanges)
+
+Synchronization successful.
+
+Changes applied during synchronization:
++---------------|-----------------------|-----------------------|-CON-+
+|               |       @default        |        @client        | FLI |
+|        Source | NEW | MOD | DEL | ERR | NEW | MOD | DEL | ERR | CTS |
++---------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+|   addressbook |  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0  |  0  |
+|   two-way, 0 KB sent by client, 0 KB received                       |
+|   item(s) in database backup: 1 before sync, 1 after it             |
++---------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+| start xxx, duration a:bcmin |
+|               synchronization completed successfully                |
++---------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+
+Data modified @default during synchronization:
+*** @default/addressbook ***
+no changes
+
+''', out)
+        self.collectEvents()
+        self.assertRegexpMatches(self.prettyPrintEvents(),
+                                 r'''status: idle, .*
+(.*\n)+status: running;waiting, 0, \{addressbook: \(two-way, running, 0\)\}
+(.*\n)*progress: 100, \{addressbook: \(, -1, -1, -1, -1, -1, -1\)\}
+(.*\n)*status: done, .*''')
+        numSyncs = numSyncs + 1
+        self.checkSync(numReports=numSyncs)
+        after = listxdg()
+        self.assertEqual(before, after)
 
         # update contact
         output = open(item, "w")
@@ -8653,7 +8823,8 @@ no changes
 (.*\n)+status: running;waiting, 0, \{addressbook: \(two-way, running, 0\)\}
 (.*\n)*progress: 100, \{addressbook: \(sending, -1, -1, 1, 0, -1, -1\)\}
 (.*\n)*status: done, .*''')
-        self.checkSync(numReports=3)
+        numSyncs = numSyncs + 1
+        self.checkSync(numReports=numSyncs)
 
         # now remove contact
         os.unlink(item)
@@ -8749,7 +8920,8 @@ no changes
 (.*\n)+status: running;waiting, 0, \{addressbook: \(two-way, running, 0\)\}
 (.*\n)*progress: 100, \{addressbook: \(sending, -1, -1, 1, 0, -1, -1\)\}
 (.*\n)*status: done, .*''')
-        self.checkSync(numReports=4)
+        numSyncs = numSyncs + 1
+        self.checkSync(numReports=numSyncs)
 
     @property("debug", False)
     @timeout(usingValgrind() and 1000 or 200)

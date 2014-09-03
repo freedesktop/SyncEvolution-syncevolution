@@ -4411,7 +4411,9 @@ SyncMLStatus SyncContext::doSync()
     SE_LOG_DEBUG(NULL, "closing session");
     // setFreeze() no longer has an effect and returns false from now on.
     m_syncFreeze = SYNC_FREEZE_NONE;
+    m_initialMessage.reset();
     sessionSentinel.reset();
+    sendBuffer.reset();
     session.reset();
     SE_LOG_DEBUG(NULL, "session closed");
 

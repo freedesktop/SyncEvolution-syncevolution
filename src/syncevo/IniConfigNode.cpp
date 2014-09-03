@@ -45,8 +45,20 @@ void IniBaseConfigNode::flush()
         throw std::runtime_error(m_data->getName() + ": internal error: flushing read-only config node not allowed");
     }
 
-    boost::shared_ptr<std::ostream> file = m_data->write();
-    toFile(*file);
+    // Our m_modified check is not perfect: sometimes changes are made
+    // that once complete, lead to the exact same file content. Catch
+    // that with a brute-force memory compare and avoid rewriting the
+    // file unless something changed.
+    std::stringstream temp;
+    toFile(temp);
+    std::string newcontent = temp.str();
+    boost::shared_ptr<std::istream> oldfile = m_data->read();
+    std::string oldcontent;
+    if (!ReadFile(*oldfile, oldcontent) ||
+        oldcontent != newcontent) {
+        boost::shared_ptr<std::ostream> newfile = m_data->write();
+        *newfile << newcontent;
+    }
 
     m_modified = false;
 }

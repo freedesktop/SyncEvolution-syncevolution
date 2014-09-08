@@ -127,15 +127,10 @@ void SoupTransportAgent::send(const char *data, size_t len)
     }
 
     // use CA certificates if available and needed,
-    // fail if not available and needed
+    // otherwise let soup use system default certificates
     if (m_verifySSL) {
         if (!m_cacerts.empty()) {
             g_object_set(m_session.get(), SOUP_SESSION_SSL_CA_FILE, m_cacerts.c_str(), NULL);
-        } else {
-            SoupURI *uri = soup_message_get_uri(message.get());
-            if (!strcmp(uri->scheme, SOUP_URI_SCHEME_HTTPS)) {
-                SE_THROW_EXCEPTION(TransportException, "SSL certificate checking requested, but no CA certificate file configured");
-            }
         }
     }
 

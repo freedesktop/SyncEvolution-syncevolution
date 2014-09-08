@@ -2945,8 +2945,8 @@ void SyncContext::getConfigXML(bool isSync, string &xml, string &configname)
     // abuse (?) the firmware version to store the SyncEvolution version number
     substTag(xml, "firmwareversion", getSwv());
     substTag(xml, "devicetype", getDevType());
-    substTag(xml, "maxmsgsize", std::max(getMaxMsgSize().get(), 10000ul));
-    substTag(xml, "maxobjsize", std::max(getMaxObjSize().get(), 1024u));
+    substTag(xml, "maxmsgsize", getMaxMsgSize().get());
+    substTag(xml, "maxobjsize", getMaxObjSize().get());
     if (m_serverMode) {
         UserIdentity id = getSyncUser();
         Credentials cred = IdentityProviderCredentials(id, getSyncPassword());

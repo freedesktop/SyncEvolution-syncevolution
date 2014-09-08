@@ -2291,9 +2291,26 @@ void SyncConfig::setSyncURL(const vector<string> &value, bool temporarily) {
 }
 InitStateString SyncConfig::getClientAuthType() const { return syncPropClientAuthType.getProperty(*getNode(syncPropClientAuthType)); }
 void SyncConfig::setClientAuthType(const string &value, bool temporarily) { syncPropClientAuthType.setProperty(*getNode(syncPropClientAuthType), value, temporarily); }
-InitState<unsigned long > SyncConfig::getMaxMsgSize() const { return syncPropMaxMsgSize.getPropertyValue(*getNode(syncPropMaxMsgSize)); }
+
+template<class T> InitState<T> EnsureMinSize(const InitState<T> &current, T min)
+{
+    if (current >= min) {
+        return current;
+    } else {
+        return InitState<T>(min);
+    }
+}
+
+InitState<unsigned long > SyncConfig::getMaxMsgSize() const {
+    // Sanitize value: don't run with buffer sizes smaller than 10KB.
+    return EnsureMinSize(syncPropMaxMsgSize.getPropertyValue(*getNode(syncPropMaxMsgSize)),
+                         10 * 1024ul);
+}
 void SyncConfig::setMaxMsgSize(unsigned long value, bool temporarily) { syncPropMaxMsgSize.setProperty(*getNode(syncPropMaxMsgSize), value, temporarily); }
-InitState<unsigned int > SyncConfig::getMaxObjSize() const { return syncPropMaxObjSize.getPropertyValue(*getNode(syncPropMaxObjSize)); }
+InitState<unsigned int > SyncConfig::getMaxObjSize() const {
+    return EnsureMinSize(syncPropMaxObjSize.getPropertyValue(*getNode(syncPropMaxObjSize)),
+                         1024u);
+}
 void SyncConfig::setMaxObjSize(unsigned int value, bool temporarily) { syncPropMaxObjSize.setProperty(*getNode(syncPropMaxObjSize), value, temporarily); }
 InitStateString SyncConfig::getDevID() const { return syncPropDevID.getProperty(*getNode(syncPropDevID)); }
 void SyncConfig::setDevID(const string &value, bool temporarily) { syncPropDevID.setProperty(*getNode(syncPropDevID), value, temporarily); }

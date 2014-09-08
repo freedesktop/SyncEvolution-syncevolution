@@ -33,6 +33,7 @@
 SE_BEGIN_CXX
 
 SoupTransportAgent::SoupTransportAgent(GMainLoop *loop) :
+    m_verifySSL(false),
     m_session(soup_session_async_new()),
     m_loop(loop ?
            g_main_loop_ref(loop) :

@@ -38,6 +38,7 @@
 #endif
 
 #include <syncevo/GLibSupport.h>
+#include <syncevo/GVariantSupport.h>
 #include <pcrecpp.h>
 
 #include <boost/lambda/core.hpp>
@@ -54,8 +55,6 @@ SE_GLIB_TYPE(AgService, ag_service)
 SE_GLIB_TYPE(AgAuthData, ag_auth_data)
 #endif
 
-SE_GLIB_TYPE(GHashTable, g_hash_table)
-
 #endif // USE_SIGNON
 
 #include <syncevo/declarations.h>
@@ -66,78 +65,6 @@ SE_BEGIN_CXX
 #ifdef USE_ACCOUNTS
 typedef GListCXX<AgService, GList, ag_service_unref> ServiceListCXX;
 #endif
-
-/**
- * Simple auto_ptr for GVariant.
- */
-class GVariantCXX : boost::noncopyable
-{
-    GVariant *m_var;
- public:
-    /** takes over ownership */
-    GVariantCXX(GVariant *var = NULL) : m_var(var) {}
-    ~GVariantCXX() { if (m_var) { g_variant_unref(m_var); } }
-
-    operator GVariant * () { return m_var; }
-    GVariantCXX &operator = (GVariant *var) {
-        if (m_var != var) {
-            if (m_var) {
-                g_variant_unref(m_var);
-            }
-            m_var = var;
-        }
-        return *this;
-    }
-};
-
-
-// Originally from google-oauth2-example.c, which is also under LGPL
-// 2.1, or any later version.
-static GVariant *HashTable2Variant(const GHashTable *hashTable) throw ()
-{
-    GVariantBuilder builder;
-    GHashTableIter iter;
-    const gchar *key;
-    GVariant *value;
-
-    if (!hashTable) {
-        return NULL;
-    }
-
-    g_variant_builder_init(&builder, G_VARIANT_TYPE_VARDICT);
-
-    g_hash_table_iter_init(&iter, (GHashTable *)hashTable);
-    while (g_hash_table_iter_next(&iter, (gpointer *)&key, (gpointer *)&value)) {
-        g_variant_builder_add(&builder, "{sv}", key, g_variant_ref(value));
-    }
-    return g_variant_builder_end(&builder);
-}
-
-/**
- * The created GHashTable maps strings to GVariants which are
- * reference counted, so when adding or setting values, use g_variant_ref_sink(g_variant_new_...()).
- */
-static GHashTable *Variant2HashTable(GVariant *variant) throw ()
-{
-    if (!variant) {
-        return NULL;
-    }
-
-    GHashTable *hashTable;
-    GVariantIter iter;
-    GVariant *value;
-    gchar *key;
-
-    hashTable = g_hash_table_new_full(g_str_hash,
-                                      g_str_equal,
-                                      g_free,
-                                      (GDestroyNotify)g_variant_unref);
-    g_variant_iter_init(&iter, variant);
-    while (g_variant_iter_next(&iter, "{sv}", &key, &value)) {
-        g_hash_table_insert(hashTable, g_strdup(key), g_variant_ref(value));
-    }
-    return hashTable;
-}
 
 class SignonAuthProvider : public AuthProvider
 {
@@ -165,10 +92,13 @@ public:
         // Retry login if even the refreshed token failed.
         g_hash_table_insert(m_sessionData, g_strdup("UiPolicy"),
                             g_variant_ref_sink(g_variant_new_uint32(failedTokens >= 2 ? SIGNON_POLICY_REQUEST_PASSWORD : 0)));
-        GVariantCXX resultDataVar;
+        // We get assigned a plain pointer to an instance that we'll own,
+        // so we have to use the "steal" variant to enable that assignment.
+        GVariantStealCXX resultDataVar;
         GErrorCXX gerror;
         // Enforce normal reference counting via _ref_sink.
-        GVariantCXX sessionDataVar(g_variant_ref_sink(HashTable2Variant(m_sessionData)));
+        GVariantCXX sessionDataVar(g_variant_ref_sink(HashTable2Variant(m_sessionData)),
+                                   TRANSFER_REF);
         PlainGStr buffer(g_variant_print(sessionDataVar, true));
         SE_LOG_DEBUG(NULL, "asking for OAuth2 token with method %s, mechanism %s and parameters %s",
                      signon_auth_session_get_method(m_authSession),
@@ -187,7 +117,7 @@ public:
                                       StringPrintf("could not obtain OAuth2 token: %s", gerror ? gerror->message : "???"),
                                       STATUS_FORBIDDEN);
         }
-        GHashTableCXX resultData(Variant2HashTable(resultDataVar), TRANSFER_REF);
+        GHashTableCXX resultData(Variant2HashTable(resultDataVar));
         GVariant *tokenVar = static_cast<GVariant *>(g_hash_table_lookup(resultData, (gpointer)"AccessToken"));
         if (!tokenVar) {
             SE_THROW("no AccessToken in OAuth2 response");
@@ -286,8 +216,8 @@ boost::shared_ptr<AuthProvider> createSignonAuthProvider(const InitStateString &
     const char *method = ag_auth_data_get_method(authData);
     const char *mechanism = ag_auth_data_get_mechanism(authData);
 
-    GVariantCXX sessionDataVar(ag_auth_data_get_login_parameters(authData, NULL));
-    GHashTableCXX sessionData(Variant2HashTable(sessionDataVar), TRANSFER_REF);
+    GVariantCXX sessionDataVar(ag_auth_data_get_login_parameters(authData, NULL), TRANSFER_REF);
+    GHashTableCXX sessionData(Variant2HashTable(sessionDataVar));
 #ifdef USE_GSSO
     GVariant *realmsVariant = (GVariant *)g_hash_table_lookup(sessionData, "Realms");
     PlainGStrArray realms(g_variant_dup_strv(realmsVariant, NULL));
@@ -360,11 +290,12 @@ boost::shared_ptr<AuthProvider> createSignonAuthProvider(const InitStateString &
 
     // 'username' is the part after signon: which we can parse directly.
     GErrorCXX gerror;
-    GVariantCXX parametersVar(g_variant_parse(hashtype.get(), username.c_str(), NULL, NULL, gerror));
+    GVariantCXX parametersVar(g_variant_parse(hashtype.get(), username.c_str(), NULL, NULL, gerror),
+                              TRANSFER_REF);
     if (!parametersVar) {
         gerror.throwError(SE_HERE, "parsing 'signon:' username");
     }
-    GHashTableCXX parameters(Variant2HashTable(parametersVar), TRANSFER_REF);
+    GHashTableCXX parameters(Variant2HashTable(parametersVar));
 
     // Extract the values that we expect in the parameters hash.
     guint32 signonID;
@@ -398,7 +329,7 @@ boost::shared_ptr<AuthProvider> createSignonAuthProvider(const InitStateString &
         !g_variant_type_equal(hashtype.get(), g_variant_get_type(value))) {
         SE_THROW("need 'session: <hash>' in 'signon:' parameters");
     }
-    GHashTableCXX sessionData(Variant2HashTable(value), TRANSFER_REF);
+    GHashTableCXX sessionData(Variant2HashTable(value));
 
     SE_LOG_DEBUG(NULL, "using identity %u, method %s, mechanism %s",
                  signonID, method, mechanism);

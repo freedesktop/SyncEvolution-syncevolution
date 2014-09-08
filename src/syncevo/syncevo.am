@@ -39,6 +39,8 @@ src_syncevo_sources = \
   src/syncevo/eds_abi_wrapper.cpp \
   src/syncevo/GLibSupport.h \
   src/syncevo/GLibSupport.cpp \
+  src/syncevo/GVariantSupport.h \
+  src/syncevo/GVariantSupport.cpp \
   src/syncevo/ThreadSupport.h \
   \
   src/syncevo/SyncML.h \

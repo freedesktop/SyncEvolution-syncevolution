@@ -57,7 +57,6 @@ SE_GOBJECT_TYPE(FolksPostalAddressFieldDetails)
 SE_GOBJECT_TYPE(FolksPersona)
 SE_GOBJECT_TYPE(FolksLocation)
 SE_GOBJECT_TYPE(GeeHashSet)
-SE_GLIB_TYPE(GHashTable, g_hash_table)
 
 #include <syncevo/declarations.h>
 SE_BEGIN_CXX

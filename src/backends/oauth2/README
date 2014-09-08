@@ -1,19 +1,20 @@
 Google CalDAV/CardDAV via OAuth2
 ================================
 
-Setup without HMI
-----------------------------
+Setup without GUI
+-----------------
 
-In case of system without HMI OAuth2 autohirzation can be made using
-refresh token obtained by user in other way (e.g. using gSSO on
-another system with HMI support, described below).
+In case of system without a the graphical user interface required by
+GOA or gSSO, OAuth2 authorization can be made using refresh token
+obtained by user in other way (e.g. using gSSO on another system with
+UI support, described below).
 
 OAuth2 authentication using refresh token is enabled by setting OAuth2
 refresh token as password and setting username to
-"username=refresh_token:{'TokenHost': <'https://accounts.google.com'>, 'TokenPath': <'/o/oauth2/token'>, 'Scope': <'https://www.googleapis.com/auth/carddav'>, 'ClientID': <'678546420751-r51m6emeabphdtdkr3cf5p71slalvsxap0.apps.googleusercontent.com'>, 'ClientSecret': <'qJyR2nz8s3kXzmBwjHH8il28'>}"
+"username=refresh_token:{'TokenHost': <'https://accounts.google.com'>, 'TokenPath': <'/o/oauth2/token'>, 'Scope': <'https://www.googleapis.com/auth/carddav https://www.googleapis.com/auth/calendar'>, 'ClientID': <'923794261470.apps.googleusercontent.com'>, 'ClientSecret': <'SlVBAcxamM0TBPlvX2c1zbEY'>}"
 
 Values of ClientId and ClientSecret need to be substituted with
-correct values.
+correct values (values here are from GOA, see below).
 
 Obtaining OAuth2 refresh token
 ==============================

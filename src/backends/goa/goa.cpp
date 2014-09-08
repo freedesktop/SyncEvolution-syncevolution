@@ -199,7 +199,8 @@ public:
 
     virtual Credentials getCredentials() const { SE_THROW("only OAuth2 is supported"); }
 
-    virtual std::string getOAuth2Bearer(int failedTokens) const
+    virtual std::string getOAuth2Bearer(int failedTokens,
+                                        const PasswordUpdateCallback &passwordUpdateCallback) const
     {
         m_account->m_ensureCredentials();
         std::string token = m_account->m_getAccessToken();

@@ -957,7 +957,8 @@ void Session::checkAuthorization()
         // Count the number of times we asked for new tokens. This helps
         // the provider determine whether the token that it returns are valid.
         try {
-            m_oauth2Bearer = m_authProvider->getOAuth2Bearer(m_oauthTokenRejections);
+            m_oauth2Bearer = m_authProvider->getOAuth2Bearer(m_oauthTokenRejections,
+                                                             boost::bind(&Settings::updatePassword, m_settings, _1));
             SE_LOG_DEBUG(NULL, "got new OAuth2 token '%s' for next request", m_oauth2Bearer.c_str());
         } catch (...) {
             std::string explanation;

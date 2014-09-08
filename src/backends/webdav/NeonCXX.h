@@ -94,6 +94,11 @@ class Settings {
     virtual boost::shared_ptr<AuthProvider> getAuthProvider() = 0;
 
     /**
+     * Updates password to new one returned during OAuth2 authorization.
+     */
+    virtual void updatePassword(const std::string& password) = 0;
+
+    /**
      * Google returns a 401 error even if the credentials
      * are valid. It seems to use that to throttle request
      * rates. This read/write setting remembers whether the

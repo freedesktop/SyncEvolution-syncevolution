@@ -2194,14 +2194,6 @@ void PasswordConfigProperty::savePassword(UserInterface &ui,
         }
         credConfig->setSyncPassword(password, false);
         syncPropPassword.savePassword(ui, *credConfig);
-    } else if (identity.m_provider != USER_IDENTITY_PLAIN_TEXT) {
-        // Cannot store passwords in providers.
-        if (password.wasSet() && !password.empty()) {
-            SE_THROW(StringPrintf("setting property '%s' not supported for provider '%s' from property '%s'",
-                                  getMainName().c_str(),
-                                  identity.m_provider.c_str(),
-                                  usernameProperty.getMainName().c_str()));
-        }
     } else {
         if (password == "-" || password == "" ||
             (boost::starts_with(password, "${") && boost::ends_with(password, "}"))) {

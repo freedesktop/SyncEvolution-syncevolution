@@ -85,7 +85,8 @@ public:
 
     virtual Credentials getCredentials() const { SE_THROW("only OAuth2 is supported"); }
 
-    virtual std::string getOAuth2Bearer(int failedTokens) const
+    virtual std::string getOAuth2Bearer(int failedTokens,
+                                        const PasswordUpdateCallback &passwordUpdateCallback) const
     {
         SE_LOG_DEBUG(NULL, "retrieving OAuth2 token, attempt %d", failedTokens);
 

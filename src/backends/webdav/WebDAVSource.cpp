@@ -157,6 +157,8 @@ public:
 
     virtual boost::shared_ptr<AuthProvider> getAuthProvider();
 
+    void updatePassword(const string &password);
+
     std::string getUsername()
     {
         lookupAuthProvider();
@@ -203,6 +205,12 @@ boost::shared_ptr<AuthProvider> ContextSettings::getAuthProvider()
 {
     lookupAuthProvider();
     return m_authProvider;
+}
+
+void ContextSettings::updatePassword(const std::string &password)
+{
+    m_context->setSyncPassword(password, false);
+    m_context->flush();
 }
 
 void ContextSettings::lookupAuthProvider()

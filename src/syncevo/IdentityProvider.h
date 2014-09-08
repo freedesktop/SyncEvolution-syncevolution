@@ -104,11 +104,15 @@ class AuthProvider
      * To achieve that, the caller must count how often he got a token that
      * did not work.
      *
-     * @param failedTokens   zero when asking for initial token, one for refresh, two for full re-authorization
+     * @param failedTokens           zero when asking for initial token, one for refresh, two for full re-authorization
+     * @param passwordUpdateCallback callback function to be called when stored refresh token need to be updated.
+     *                               Only parameter of this callback function is new value of refresh token.
      *
      * @return a base64 encoded token, ready to be used in "Authorization: Bearer %s"
      */
-    virtual std::string getOAuth2Bearer(int failedTokens) const = 0;
+    typedef boost::function<void (const std::string &newPassword)> PasswordUpdateCallback;
+    virtual std::string getOAuth2Bearer(int failedTokens,
+                                        const PasswordUpdateCallback &passwordUpdateCallback) const = 0;
 
     /**
      * Returns username at the remote service. Works for

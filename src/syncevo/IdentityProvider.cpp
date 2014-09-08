@@ -61,7 +61,7 @@ public:
     virtual bool wasConfigured() const { return !m_creds.m_username.empty() || !m_creds.m_password.empty(); }
     virtual bool methodIsSupported(AuthMethod method) const { return method == AUTH_METHOD_CREDENTIALS; }
     virtual Credentials getCredentials() const { return m_creds; }
-    virtual std::string getOAuth2Bearer(int failedTokens) const { SE_THROW("OAuth2 not supported"); return ""; }
+    virtual std::string getOAuth2Bearer(int failedTokens, const PasswordUpdateCallback &passwordUpdateCallback) const { SE_THROW("OAuth2 not supported"); return ""; }
     virtual std::string getUsername() const { return m_creds.m_username; }
 };
 

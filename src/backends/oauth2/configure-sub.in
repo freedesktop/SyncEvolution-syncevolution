@@ -1,4 +1,7 @@
-PKG_CHECK_MODULES(JSON, [json], HAVE_JSON=yes, HAVE_JSON=no)
+# Both json-c.pc (libjson-c-dev on Debian Testing) and json.pc
+# (legacy, libjson0-dev on Debian Wheezy and Testing) are okay.
+PKG_CHECK_MODULES(JSON, [json], HAVE_JSON=yes,
+                  [PKG_CHECK_MODULES(JSON, [json-c], HAVE_JSON=yes, HAVE_JSON=no)])
 
 def_refresh_token="no"
 

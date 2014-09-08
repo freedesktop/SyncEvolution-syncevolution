@@ -23,7 +23,7 @@
 #include <syncevo/GLibSupport.h>
 #include <syncevo/GVariantSupport.h>
 #include <syncevo/SoupTransportAgent.h>
-#include <json/json.h>
+#include <json.h>
 
 #include <syncevo/declarations.h>
 SE_BEGIN_CXX

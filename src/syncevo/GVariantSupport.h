@@ -46,6 +46,13 @@ GHashTableCXX Variant2HashTable(GVariant *variant) throw ();
 
 #endif // GLIB_CHECK_VERSION
 
+/**
+ * The created GHashTable maps strings to strings. Both key and values
+ * are owned by the hash table. Will throw errors if the variant
+ * has entries with a different kind of key or value.
+ */
+GHashTableCXX Variant2StrHashTable(GVariant *variant);
+
 #endif // HAVE_GLIB
 
 SE_END_CXX

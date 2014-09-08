@@ -68,6 +68,24 @@ GHashTableCXX Variant2HashTable(GVariant *variant) throw ()
 }
 
 #endif // GLIB_CHECK_VERSION
+
+GHashTableCXX Variant2StrHashTable(GVariant *variant)
+{
+    GVariantIter iter;
+    gchar *value;
+    gchar *key;
+
+    GHashTableStealCXX hashTable(g_hash_table_new_full(g_str_hash,
+                                                       g_str_equal,
+                                                       g_free,
+                                                       g_free));
+    g_variant_iter_init(&iter, variant);
+    while (g_variant_iter_next(&iter, "{ss}", &key, &value)) {
+        g_hash_table_insert(hashTable, g_strdup(key), g_strdup(value));
+    }
+    return hashTable;
+}
+
 #endif // HAVE_GLIB
 
 SE_END_CXX

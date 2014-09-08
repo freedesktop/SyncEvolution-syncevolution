@@ -107,9 +107,14 @@ public:
                         }
                         if (strcmp("refresh_token", key) == 0) {
                             std::string newRefreshToken = json_object_get_string(val);
-                            SE_LOG_INFO(NULL, "refresh token invalidated - updating refresh token to %s", newRefreshToken.c_str());
                             if (passwordUpdateCallback) {
-                                passwordUpdateCallback(newRefreshToken);
+                                try {
+                                    passwordUpdateCallback(newRefreshToken);
+                                } catch (...) {
+                                    std::string explanation;
+                                    Exception::handle(explanation, HANDLE_EXCEPTION_NO_ERROR);
+                                    SE_LOG_INFO(NULL, "The attempt to update the refresh token in the 'password' property failed, probably because there is no configuration for it: %s\nRemember to use the new token in the future: %s", explanation.c_str(), newRefreshToken.c_str());
+                                }
                             }
                         }
                     }

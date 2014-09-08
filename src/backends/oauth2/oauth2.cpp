@@ -158,7 +158,7 @@ boost::shared_ptr<AuthProvider> createOAuth2AuthProvider(const InitStateString &
                                                          const InitStateString &password)
 {
     // Expected content of parameter GVariant.
-    boost::shared_ptr<GVariantType> hashtype(g_variant_type_new("a{sv}"), g_variant_type_free);
+    boost::shared_ptr<GVariantType> hashtype(g_variant_type_new("a{ss}"), g_variant_type_free);
 
     // 'username' is the part after refresh_token: which we can parse directly.
     GErrorCXX gerror;
@@ -166,7 +166,7 @@ boost::shared_ptr<AuthProvider> createOAuth2AuthProvider(const InitStateString &
     if (!parametersVar) {
         gerror.throwError(SE_HERE, "parsing 'refresh_token:' username");
     }
-    GHashTableCXX parameters(Variant2HashTable(parametersVar));
+    GHashTableCXX parameters(Variant2StrHashTable(parametersVar));
 
     // Extract the values that we expect in the parameters hash.
     const char *tokenHost;
@@ -175,43 +175,31 @@ boost::shared_ptr<AuthProvider> createOAuth2AuthProvider(const InitStateString &
     const char *clientID;
     const char *clientSecret;
 
-    GVariant *value;
-
-    value = (GVariant *)g_hash_table_lookup(parameters, "TokenHost");
-    if (!value ||
-        !g_variant_type_equal(G_VARIANT_TYPE_STRING, g_variant_get_type(value))) {
+    tokenHost = (const gchar *)g_hash_table_lookup(parameters, "TokenHost");
+    if (!tokenHost) {
         SE_THROW("need 'TokenHost: <string>' in 'refresh_token:' parameters");
     }
-    tokenHost = g_variant_get_string(value, NULL);
 
-    value = (GVariant *)g_hash_table_lookup(parameters, "TokenPath");
-    if (!value ||
-        !g_variant_type_equal(G_VARIANT_TYPE_STRING, g_variant_get_type(value))) {
+    tokenPath = (const gchar *)g_hash_table_lookup(parameters, "TokenPath");
+    if (!tokenPath) {
         SE_THROW("need 'TokenPath: <string>' in 'refresh_token:' parameters");
     }
-    tokenPath = g_variant_get_string(value, NULL);
 
-    value = (GVariant *)g_hash_table_lookup(parameters, "Scope");
-    if (!value ||
-        !g_variant_type_equal(G_VARIANT_TYPE_STRING, g_variant_get_type(value))) {
+    scope = (const gchar *)g_hash_table_lookup(parameters, "Scope");
+    if (!scope) {
         SE_THROW("need 'Scope: <string>' in 'refresh_token:' parameters");
     }
-    scope = g_variant_get_string(value, NULL);
 
-    value = (GVariant *)g_hash_table_lookup(parameters, "ClientID");
-    if (!value ||
-        !g_variant_type_equal(G_VARIANT_TYPE_STRING, g_variant_get_type(value))) {
+    clientID = (const gchar *)g_hash_table_lookup(parameters, "ClientID");
+    if (!clientID) {
         SE_THROW("need 'ClientID: <string>' in 'refresh_token:' parameters");
     }
-    clientID = g_variant_get_string(value, NULL);
 
-    value = (GVariant *)g_hash_table_lookup(parameters, "ClientSecret");
-    if (!value ||
-        !g_variant_type_equal(G_VARIANT_TYPE_STRING, g_variant_get_type(value))) {
+    clientSecret = (const gchar *)g_hash_table_lookup(parameters, "ClientSecret");
+    if (!clientSecret) {
         SE_THROW("need 'ClientSecret: <string>' in 'refresh_token:' parameters");
     }
-    clientSecret = g_variant_get_string(value, NULL);
-    
+
     if (password.empty()) {
         SE_THROW("need refresh token provided as password");
     }

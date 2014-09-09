@@ -165,11 +165,11 @@ boost::shared_ptr<AuthProvider> createOAuth2AuthProvider(const InitStateString &
     // Expected content of parameter GVariant.
     boost::shared_ptr<GVariantType> hashtype(g_variant_type_new("a{ss}"), g_variant_type_free);
 
-    // 'username' is the part after refresh_token: which we can parse directly.
+    // 'username' is the part after oauth2: which we can parse directly.
     GErrorCXX gerror;
     GVariantStealCXX parametersVar(g_variant_parse(hashtype.get(), username.c_str(), NULL, NULL, gerror));
     if (!parametersVar) {
-        gerror.throwError(SE_HERE, "parsing 'refresh_token:' username");
+        gerror.throwError(SE_HERE, "parsing 'oauth2:' username");
     }
     GHashTableCXX parameters(Variant2StrHashTable(parametersVar));
 
@@ -182,27 +182,27 @@ boost::shared_ptr<AuthProvider> createOAuth2AuthProvider(const InitStateString &
 
     tokenHost = (const gchar *)g_hash_table_lookup(parameters, "TokenHost");
     if (!tokenHost) {
-        SE_THROW("need 'TokenHost: <string>' in 'refresh_token:' parameters");
+        SE_THROW("need 'TokenHost: <string>' in 'oauth2:' parameters");
     }
 
     tokenPath = (const gchar *)g_hash_table_lookup(parameters, "TokenPath");
     if (!tokenPath) {
-        SE_THROW("need 'TokenPath: <string>' in 'refresh_token:' parameters");
+        SE_THROW("need 'TokenPath: <string>' in 'oauth2:' parameters");
     }
 
     scope = (const gchar *)g_hash_table_lookup(parameters, "Scope");
     if (!scope) {
-        SE_THROW("need 'Scope: <string>' in 'refresh_token:' parameters");
+        SE_THROW("need 'Scope: <string>' in 'oauth2:' parameters");
     }
 
     clientID = (const gchar *)g_hash_table_lookup(parameters, "ClientID");
     if (!clientID) {
-        SE_THROW("need 'ClientID: <string>' in 'refresh_token:' parameters");
+        SE_THROW("need 'ClientID: <string>' in 'oauth2:' parameters");
     }
 
     clientSecret = (const gchar *)g_hash_table_lookup(parameters, "ClientSecret");
     if (!clientSecret) {
-        SE_THROW("need 'ClientSecret: <string>' in 'refresh_token:' parameters");
+        SE_THROW("need 'ClientSecret: <string>' in 'oauth2:' parameters");
     }
 
     if (password.empty()) {

@@ -19,7 +19,7 @@
 
 #include <config.h>
 
-#if defined(USE_REFRESH_TOKEN) || defined(STATIC_REFRESH_TOKEN)
+#if defined(USE_OAUTH2) || defined(STATIC_OAUTH2)
 
 #include "oauth2.h"
 
@@ -32,8 +32,8 @@ static class OAuth2Provider : public IdentityProvider
 {
 public:
     OAuth2Provider() :
-	IdentityProvider("refresh_token",
-			 "refresh_token:<parameters>\n"
+	IdentityProvider("oauth2",
+			 "oauth2:<parameters>\n"
 			 "   Authentication using refresh token.\n"
 			 "   GVariant text dump suitable for g_variant_parse() (see\n"
 			 "   https://developer.gnome.org/glib/stable/gvariant-text.html).\n"

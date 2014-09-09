@@ -1,0 +1,5 @@
+    <!-- list of internal fields representing plain text note data -->
+    <fieldlist name="Raw">
+      <field name="DATA" type="string" compare="always"/>
+    </fieldlist>
+

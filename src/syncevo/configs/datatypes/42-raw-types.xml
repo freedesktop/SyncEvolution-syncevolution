@@ -1,0 +1,11 @@
+    <datatype name="raw-vcard" basetype="text">
+      <use profile="Raw"/>
+      <typestring>text/vcard</typestring>
+      <versionstring>3.0</versionstring>
+    </datatype>
+
+    <datatype name="raw-calendar" basetype="text">
+      <use profile="Raw"/>
+      <typestring>text/calendar</typestring>
+      <versionstring>2.0</versionstring>
+    </datatype>

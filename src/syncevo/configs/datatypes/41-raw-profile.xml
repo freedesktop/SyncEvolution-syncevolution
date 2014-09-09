@@ -1,0 +1,7 @@
+    <textprofile name="Raw" fieldlist="Raw">
+      <linemap field="DATA">
+        <numlines>0</numlines>
+        <inheader>false</inheader>
+        <allowempty>true</allowempty>
+      </linemap>
+    </textprofile>

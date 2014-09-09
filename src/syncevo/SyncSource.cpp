@@ -776,6 +776,16 @@ void SyncSourceSerialize::getSynthesisInfo(SynthesisInfo &info,
     } else if (type == "text/plain") {
         info.m_fieldlist = "Note";
         info.m_profile = "\"Note\", 2";
+    } else if (type == "raw/text/vcard") {
+        info.m_native = "vCard30";
+        info.m_fieldlist = "Raw";
+        info.m_datatypes =
+            "        <use datatype='raw-vcard' mode='rw' preferred='yes'/>\n";
+    } else if (type == "raw/text/calendar") {
+        info.m_native = "iCalendar20";
+        info.m_fieldlist = "Raw";
+        info.m_datatypes =
+            "        <use datatype='raw-calendar' mode='rw' preferred='yes'/>\n";
     } else {
         throwError(SE_HERE, string("default MIME type not supported: ") + type);
     }
@@ -831,6 +841,12 @@ std::string SyncSourceBase::getDataTypeSupport(const std::string &type,
         datatypes =
             "        <use datatype='note10' mode='rw' preferred='yes'/>\n"
             "        <use datatype='note11' mode='rw'/>\n";
+    } else if (type == "raw/text/vcard") {
+        datatypes =
+            "        <use datatype='raw-vcard' mode='rw' preferred='yes'/>\n";
+    } else if (type == "raw/text/calendar") {
+        datatypes =
+            "        <use datatype='raw-calendar' mode='rw' preferred='yes'/>\n";
     } else if (type.empty()) {
         throwError(SE_HERE, "no MIME type configured");
     } else {

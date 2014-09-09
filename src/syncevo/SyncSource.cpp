@@ -1544,9 +1544,11 @@ sysync::TSyError SyncSourceAdmin::saveAdminData(const char *adminData)
     m_configNode->setProperty(m_adminPropertyName,
                               StringEscape::escape(adminData, '!', StringEscape::INI_VALUE));
 
-    // Flush here, because some calls to saveAdminData() happend
-    // after SyncSourceAdmin::flush() (= session end).
-    m_configNode->flush();
+    // The exact ordering of API calls is not defined. In practice, EndDataWrite is
+    // followed by Insert/Update/DeleteMapItem, finished by saveAdminData. Therefore
+    // we flush here.
+    flush();
+
     return sysync::LOCERR_OK;
 }
 
@@ -1580,9 +1582,6 @@ sysync::TSyError SyncSourceAdmin::insertMapItem(sysync::cMapID mID)
     }
 #else
     m_mapping[key] = value;
-    m_mappingNode->clear();
-    m_mappingNode->writeProperties(m_mapping);
-    m_mappingNode->flush();
     return sysync::LOCERR_OK;
 #endif
 }
@@ -1598,9 +1597,6 @@ sysync::TSyError SyncSourceAdmin::updateMapItem(sysync::cMapID mID)
         return sysync::DB_Forbidden;
     } else {
         m_mapping[key] = value;
-        m_mappingNode->clear();
-        m_mappingNode->writeProperties(m_mapping);
-        m_mappingNode->flush();
         return sysync::LOCERR_OK;
     }
 }
@@ -1616,9 +1612,6 @@ sysync::TSyError SyncSourceAdmin::deleteMapItem(sysync::cMapID mID)
         return sysync::DB_Forbidden;
     } else {
         m_mapping.erase(it);
-        m_mappingNode->clear();
-        m_mappingNode->writeProperties(m_mapping);
-        m_mappingNode->flush();
         return sysync::LOCERR_OK;
     }
 }
@@ -1713,7 +1706,6 @@ void SyncSourceAdmin::init(SyncSource::Operations &ops,
         ops.m_deleteMapItem = boost::bind(&SyncSourceAdmin::deleteMapItem,
                                           this, _1);
     }
-    ops.m_endDataWrite.getPostSignal().connect(boost::bind(&SyncSourceAdmin::flush, this));
 }
 
 void SyncSourceAdmin::init(SyncSource::Operations &ops,
